@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  # 已注释掉使用 Docker 的 MySQL 和 Redis
+  # mysql:
+  #   image: mysql:8.0
+  # ... (其余配置被注释)
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fundtogether-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      # Mac 宿主机上的 MySQL 和 Redis，可以通过 host.docker.internal 访问
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/fundtogether?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATA_REDIS_HOST=host.docker.internal
+      - SPRING_DATA_REDIS_PORT=6379
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fundtogether-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+# volumes:
+#   mysql-data:
+#   redis-data:

@@ -1,0 +1,127 @@
+package com.fundtogether.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fundtogether.dto.SupportOrderCreateDTO;
+import com.fundtogether.entity.Project;
+import com.fundtogether.entity.SupportOrder;
+import com.fundtogether.mapper.SupportOrderMapper;
+import com.fundtogether.entity.Project;
+import com.fundtogether.entity.SysUser;
+import com.fundtogether.service.ProjectService;
+import com.fundtogether.service.SupportOrderService;
+import com.fundtogether.service.SysUserService;
+import com.fundtogether.vo.SupporterVO;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import java.util.Map;
+import java.util.HashMap;
+import java.math.BigDecimal;
+
+@Service
+public class SupportOrderServiceImpl extends ServiceImpl<SupportOrderMapper, SupportOrder> implements SupportOrderService {
+
+    @Autowired
+    private ProjectService projectService;
+    
+    @Autowired
+    private SysUserService sysUserService;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void createOrder(SupportOrderCreateDTO dto, Long userId) {
+        Project project = projectService.getProjectDetail(dto.getProjectId());
+        
+        SupportOrder order = new SupportOrder();
+        order.setOrderNo(UUID.randomUUID().toString().replace("-", ""));
+        order.setUserId(userId);
+        order.setProjectId(dto.getProjectId());
+        order.setAmount(dto.getAmount());
+        order.setMessage(dto.getMessage());
+        order.setPayChannel(dto.getPayChannel());
+        // Simulate immediate payment success
+        order.setStatus(1); // 1-已支付
+        order.setPayTime(java.time.LocalDateTime.now());
+        
+        this.save(order);
+        
+        // Update project stats
+        project.setCurrentAmount(project.getCurrentAmount().add(dto.getAmount()));
+        project.setSupporterCount(project.getSupporterCount() + 1);
+        projectService.updateById(project);
+    }
+
+    @Override
+    public IPage<SupportOrder> getMyOrders(Long userId, Integer current, Integer size) {
+        Page<SupportOrder> page = new Page<>(current, size);
+        LambdaQueryWrapper<SupportOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SupportOrder::getUserId, userId);
+        wrapper.orderByDesc(SupportOrder::getCreatedAt);
+        
+        return this.page(page, wrapper);
+    }
+
+    @Override
+    public IPage<SupporterVO> getProjectSupporters(Long projectId, Long sponsorId, Integer current, Integer size) {
+        Project project = projectService.getById(projectId);
+        if (project == null) {
+            throw new RuntimeException("项目不存在");
+        }
+        if (!project.getSponsorId().equals(sponsorId)) {
+            throw new RuntimeException("无权查看他人项目的支持者");
+        }
+        
+        Page<SupportOrder> page = new Page<>(current, size);
+        LambdaQueryWrapper<SupportOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SupportOrder::getProjectId, projectId);
+        wrapper.eq(SupportOrder::getStatus, 1); // 1-已支付
+        wrapper.orderByDesc(SupportOrder::getCreatedAt);
+        IPage<SupportOrder> orderPage = this.page(page, wrapper);
+        
+        Page<SupporterVO> voPage = new Page<>(current, size, orderPage.getTotal());
+        List<SupporterVO> voList = orderPage.getRecords().stream().map(order -> {
+            SupporterVO vo = new SupporterVO();
+            BeanUtils.copyProperties(order, vo);
+            SysUser user = sysUserService.getById(order.getUserId());
+            if (user != null) {
+                vo.setNickname(user.getNickname());
+                vo.setAvatar(user.getAvatar());
+            }
+            return vo;
+        }).collect(Collectors.toList());
+        
+        voPage.setRecords(voList);
+        return voPage;
+    }
+
+    @Override
+    public Map<String, Object> getMyStats(Long userId) {
+        LambdaQueryWrapper<SupportOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SupportOrder::getUserId, userId);
+        wrapper.eq(SupportOrder::getStatus, 1); // 1-已支付
+        
+        List<SupportOrder> orders = this.list(wrapper);
+        
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        long projectCount = orders.stream().map(SupportOrder::getProjectId).distinct().count();
+        
+        for (SupportOrder order : orders) {
+            totalAmount = totalAmount.add(order.getAmount());
+        }
+        
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalAmount", totalAmount);
+        stats.put("projectCount", projectCount);
+        
+        return stats;
+    }
+}
