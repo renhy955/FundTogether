@@ -28,6 +28,10 @@ export const updateProfile = (data: any) => {
   return request.put('/user/profile', data)
 }
 
+export const getUserInfo = () => {
+  return request.get('/user/info')
+}
+
 export const bindPaymentMethod = (data: any) => {
   return request.post('/user/payment-method', data)
 }

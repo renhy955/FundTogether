@@ -137,6 +137,18 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (dto.getNickname() != null) user.setNickname(dto.getNickname());
         if (dto.getAvatar() != null) user.setAvatar(dto.getAvatar());
         if (dto.getBio() != null) user.setBio(dto.getBio());
+        if (dto.getEducation() != null) user.setEducation(dto.getEducation());
+        if (dto.getBirthday() != null && !dto.getBirthday().isEmpty()) {
+            try {
+                user.setBirthday(java.time.LocalDate.parse(dto.getBirthday()));
+            } catch (Exception e) {
+                // Ignore parse error
+            }
+        }
+        if (dto.getCompany() != null) user.setCompany(dto.getCompany());
+        if (dto.getProfession() != null) user.setProfession(dto.getProfession());
+        if (dto.getLocation() != null) user.setLocation(dto.getLocation());
+        if (dto.getGender() != null) user.setGender(dto.getGender());
         
         this.updateById(user);
     }

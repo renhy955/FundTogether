@@ -43,6 +43,72 @@ public class AdminController {
     @Autowired
     private SupportOrderMapper supportOrderMapper;
 
+    @Autowired
+    private com.fundtogether.service.SysNoticeService sysNoticeService;
+
+    @Autowired
+    private com.fundtogether.service.SysUserMessageService sysUserMessageService;
+
+    private void handleNoticePublished(com.fundtogether.entity.SysNotice notice) {
+        if (notice.getStatus() != null && notice.getStatus() == 1) {
+            List<SysUser> users = sysUserService.list();
+            List<com.fundtogether.entity.SysUserMessage> messages = users.stream().map(user -> {
+                com.fundtogether.entity.SysUserMessage msg = new com.fundtogether.entity.SysUserMessage();
+                msg.setUserId(user.getId());
+                msg.setType(1); // 1-系统公告
+                msg.setTitle("新系统公告: " + notice.getTitle());
+                msg.setContent(notice.getContent());
+                msg.setRelatedId(notice.getId());
+                msg.setIsRead(0);
+                return msg;
+            }).collect(java.util.stream.Collectors.toList());
+
+            if (!messages.isEmpty()) {
+                sysUserMessageService.saveBatch(messages);
+            }
+
+            // Broadcast via WebSocket
+            com.fundtogether.websocket.WebSocketServer.broadcastMessage("New notice published: " + notice.getTitle());
+        }
+    }
+
+    @GetMapping("/notices")
+    public Result<IPage<com.fundtogether.entity.SysNotice>> getNotices(@RequestParam(defaultValue = "1") Integer current,
+                                                                      @RequestParam(defaultValue = "10") Integer size) {
+        Page<com.fundtogether.entity.SysNotice> page = new Page<>(current, size);
+        LambdaQueryWrapper<com.fundtogether.entity.SysNotice> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(com.fundtogether.entity.SysNotice::getCreatedAt);
+        return Result.success(sysNoticeService.page(page, wrapper));
+    }
+
+    @PostMapping("/notices")
+    public Result<?> createNotice(@RequestBody com.fundtogether.entity.SysNotice sysNotice) {
+        sysNoticeService.save(sysNotice);
+        handleNoticePublished(sysNotice);
+        return Result.success("公告创建成功");
+    }
+
+    @PutMapping("/notices/{id}/publish")
+    public Result<?> publishNotice(@PathVariable Long id) {
+        com.fundtogether.entity.SysNotice notice = sysNoticeService.getById(id);
+        if (notice == null) {
+            return Result.error("公告不存在");
+        }
+        if (notice.getStatus() != null && notice.getStatus() == 1) {
+            return Result.error("公告已发布");
+        }
+        notice.setStatus(1);
+        sysNoticeService.updateById(notice);
+        handleNoticePublished(notice);
+        return Result.success("发布成功");
+    }
+
+    @DeleteMapping("/notices/{id}")
+    public Result<?> deleteNotice(@PathVariable Long id) {
+        sysNoticeService.removeById(id);
+        return Result.success("删除成功");
+    }
+
     @GetMapping("/users")
     public Result<IPage<SysUser>> getUsers(@RequestParam(defaultValue = "1") Integer current,
                                            @RequestParam(defaultValue = "10") Integer size) {
@@ -132,6 +198,22 @@ public class AdminController {
         }
         sysUserService.updateById(user);
         return Result.success("用户状态更新成功");
+    }
+
+    @GetMapping("/stats")
+    public Result<Map<String, Object>> getStats() {
+        Map<String, Object> stats = new HashMap<>();
+        BigDecimal totalAmount = supportOrderMapper.getTotalAmount();
+        Long projectCount = projectService.count();
+        Long activeUsers = sysUserService.count(new LambdaQueryWrapper<SysUser>().eq(SysUser::getStatus, 1));
+        Long successfulProjects = projectService.count(new LambdaQueryWrapper<Project>().eq(Project::getStatus, 5)); // Assuming 5 is completed/successful
+
+        stats.put("totalAmount", totalAmount != null ? totalAmount : BigDecimal.ZERO);
+        stats.put("totalProjects", projectCount);
+        stats.put("totalUsers", activeUsers);
+        stats.put("successfulProjects", successfulProjects);
+        
+        return Result.success(stats);
     }
 
     @GetMapping("/stats/platform")

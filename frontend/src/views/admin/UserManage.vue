@@ -42,7 +42,10 @@
                 @click="toggleUserStatus(row)"
                 :title="row.status === 1 ? '禁用' : '启用'"
               >
-                <el-icon><component :is="row.status === 1 ? 'Lock' : 'Unlock'" /></el-icon>
+                <el-icon>
+                  <Lock v-if="row.status === 1" />
+                  <Unlock v-else />
+                </el-icon>
               </el-button>
             </template>
           </el-table-column>
@@ -183,35 +186,47 @@ onMounted(() => {
 
 <style scoped>
 .admin-container {
-  min-height: 100vh;
-  background-color: #f5f7fa;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .main-content {
   max-width: 1200px;
-  margin: 20px;
+  margin: 0 auto;
 }
 
 .page-header {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .table-card {
-  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: none;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .pagination {
   display: flex;
-  justify-content: center;
-  margin-top: 20px;
+  justify-content: flex-end;
+  margin-top: 24px;
 }
 
 @media (max-width: 768px) {
-  .main-content {
-    margin: 10px;
-  }
   .page-header h2 {
-    font-size: 18px;
+    font-size: 20px;
   }
   .responsive-table :deep(.el-table__cell) {
     padding: 8px 0;

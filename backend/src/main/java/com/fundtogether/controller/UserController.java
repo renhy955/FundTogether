@@ -36,6 +36,15 @@ public class UserController {
         return loginUser.getId();
     }
 
+    @GetMapping("/info")
+    public Result<com.fundtogether.entity.SysUser> getUserInfo() {
+        com.fundtogether.entity.SysUser user = sysUserService.getById(getCurrentUserId());
+        if (user != null) {
+            user.setPassword(null);
+        }
+        return Result.success(user);
+    }
+
     @PostMapping("/register")
     public Result<?> register(@RequestBody @Valid UserRegisterDTO registerDTO, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {

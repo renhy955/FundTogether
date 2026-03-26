@@ -32,11 +32,6 @@
             />
           </div>
 
-          <!-- Funding Chart -->
-          <div class="funding-chart-container">
-            <div ref="fundingChartRef" class="funding-chart"></div>
-          </div>
-
           <div class="action-section">
             <el-button 
               type="primary" 
@@ -48,6 +43,17 @@
               {{ project.status === 1 ? '立即支持' : '不在筹款中' }}
             </el-button>
           </div>
+        </div>
+      </div>
+
+      <!-- Funding Chart Section -->
+      <div class="funding-progress-section" v-show="hasChartData">
+        <div class="section-header">
+          <h2>实时筹款进度</h2>
+          <p>记录每一份爱心的汇聚</p>
+        </div>
+        <div class="funding-chart-container">
+          <div ref="fundingChartRef" class="funding-chart"></div>
         </div>
       </div>
 
@@ -214,6 +220,7 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const project = ref<any>(null)
+const hasChartData = ref(false)
 const loading = ref(false)
 const activeTab = ref('detail')
 
@@ -257,46 +264,57 @@ const fundingChartRef = ref<HTMLElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
 
 const initChart = async () => {
-  if (!fundingChartRef.value || !route.params.id) return
+  if (!route.params.id) return
   
   try {
     const res = await request.get(`/public/project/${route.params.id}/funding-progress`)
     const data = res.data || []
     
-    if (data.length === 0) return
+    if (data.length === 0) {
+      hasChartData.value = false
+      return
+    }
     
-    chartInstance = echarts.init(fundingChartRef.value)
+    hasChartData.value = true
+    await nextTick()
+    
+    if (!fundingChartRef.value) return
+    if (!chartInstance) {
+      chartInstance = echarts.init(fundingChartRef.value)
+    }
     
     const dates = data.map((item: any) => item.date)
     const amounts = data.map((item: any) => item.amount)
     
     const option = {
-      title: {
-        text: '实时筹款进度',
-        left: 'center',
+      tooltip: {
+        trigger: 'axis',
+        formatter: '{b}<br/>累计金额: ￥{c}',
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        borderColor: '#e4e7ed',
         textStyle: {
-          fontSize: 16,
           color: '#303133'
         }
       },
-      tooltip: {
-        trigger: 'axis',
-        formatter: '{b}<br/>累计金额: ￥{c}'
-      },
       grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
+        left: '2%',
+        right: '2%',
+        bottom: '0%',
+        top: '10%',
         containLabel: true
       },
       xAxis: {
         type: 'category',
         boundaryGap: false,
-        data: dates
+        data: dates,
+        axisLine: { lineStyle: { color: '#dcdfe6' } },
+        axisLabel: { color: '#606266' }
       },
       yAxis: {
         type: 'value',
-        name: '金额 (元)'
+        name: '金额 (元)',
+        splitLine: { lineStyle: { type: 'dashed', color: '#ebeef5' } },
+        axisLabel: { color: '#606266' }
       },
       series: [
         {
@@ -304,14 +322,16 @@ const initChart = async () => {
           type: 'line',
           smooth: true,
           data: amounts,
+          symbolSize: 8,
+          itemStyle: {
+            color: '#409eff',
+            borderWidth: 2
+          },
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(64,158,255,0.5)' },
-              { offset: 1, color: 'rgba(64,158,255,0.1)' }
+              { offset: 0, color: 'rgba(64,158,255,0.4)' },
+              { offset: 1, color: 'rgba(64,158,255,0.0)' }
             ])
-          },
-          itemStyle: {
-            color: '#409eff'
           }
         }
       ]
@@ -493,16 +513,40 @@ onMounted(() => {
 <style scoped>
 .detail-container {
   min-height: 100vh;
-  background-color: #f5f7fa;
+  background-color: var(--bg-page);
+  padding-bottom: 60px;
+}
+
+.funding-progress-section {
+  background: var(--bg-surface);
+  padding: 40px;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 40px;
+}
+
+.funding-progress-section .section-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.funding-progress-section .section-header h2 {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+  font-weight: 800;
+}
+
+.funding-progress-section .section-header p {
+  color: var(--text-secondary);
+  font-size: 16px;
+  margin: 0;
 }
 
 .funding-chart-container {
   width: 100%;
-  height: 300px;
-  margin-bottom: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 10px;
+  height: 350px;
 }
 
 .funding-chart {
@@ -512,53 +556,57 @@ onMounted(() => {
 
 /* Rewards Styles */
 .rewards-section {
-  padding: 20px 0;
+  padding: 32px 0;
 }
 
 .rewards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
 }
 
 .reward-card {
   height: 100%;
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--border-color) !important;
 }
 
 .reward-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .reward-amount {
-  font-size: 24px;
-  font-weight: bold;
-  color: #f56c6c;
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-primary);
 }
 
 .reward-limit {
   font-size: 13px;
-  color: #909399;
-  background: #f4f4f5;
-  padding: 2px 8px;
-  border-radius: 10px;
+  font-weight: 600;
+  color: var(--color-warning);
+  background: #FEF3C7;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
 }
 
 .reward-title {
-  font-size: 16px;
-  margin: 0 0 10px 0;
-  color: #303133;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  margin: 0 0 12px 0;
+  color: var(--text-primary);
 }
 
 .reward-content {
-  color: #606266;
-  font-size: 14px;
+  color: var(--text-secondary);
+  font-size: 15px;
   line-height: 1.6;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   flex: 1;
 }
 
@@ -567,63 +615,71 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-top: auto;
-  padding-top: 15px;
-  border-top: 1px solid #ebeef5;
+  padding-top: 20px;
+  border-top: 1px dashed var(--border-color);
 }
 
 .reward-time {
-  font-size: 12px;
-  color: #909399;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-tertiary);
 }
 
 /* Updates Styles */
 .updates-section {
-  padding: 20px 0;
+  padding: 32px 0;
   min-height: 200px;
 }
 
 .update-item {
-  padding: 20px 0;
-  border-bottom: 1px solid #ebeef5;
+  padding: 24px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+  background: var(--bg-surface);
 }
 
 .update-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 16px;
 }
 
 .update-title {
   margin: 0;
-  font-size: 18px;
-  color: #303133;
+  font-family: var(--font-heading);
+  font-size: 20px;
+  color: var(--text-primary);
 }
 
 .update-time {
-  color: #909399;
+  color: var(--text-tertiary);
   font-size: 14px;
+  font-weight: 500;
 }
 
 .update-content {
-  color: #606266;
+  color: var(--text-secondary);
   line-height: 1.8;
+  font-size: 16px;
   white-space: pre-wrap;
 }
 
 .main-content {
-  max-width: 1200px;
-  margin: 30px auto;
+  max-width: 1400px;
+  margin: 40px auto;
+  padding: 0 32px;
 }
 
 .project-header {
   display: flex;
-  gap: 40px;
-  background: #fff;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-  margin-bottom: 30px;
+  gap: 48px;
+  background: var(--bg-surface);
+  padding: 40px;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 40px;
 }
 
 .media-section {
@@ -632,9 +688,10 @@ onMounted(() => {
 
 .main-media {
   width: 100%;
-  height: 400px;
+  height: 440px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .info-section {
@@ -644,29 +701,35 @@ onMounted(() => {
 }
 
 .title {
-  margin: 0 0 15px 0;
-  font-size: 28px;
-  color: #303133;
+  margin: 0 0 16px 0;
+  font-family: var(--font-heading);
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .summary {
-  color: #606266;
+  color: var(--text-secondary);
+  font-size: 18px;
   line-height: 1.6;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .stats-box {
-  background: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 25px;
+  background: var(--bg-page);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 32px;
+  border: 1px solid var(--border-color);
 }
 
 .stat-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 10px;
-  font-size: 16px;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
 .stat-row:last-child {
@@ -674,17 +737,22 @@ onMounted(() => {
 }
 
 .stat-row .label {
-  color: #909399;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 15px;
 }
 
 .stat-row .value {
-  font-weight: bold;
-  color: #303133;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-primary);
 }
 
 .stat-row .highlight {
-  color: #f56c6c;
-  font-size: 24px;
+  color: var(--color-primary);
+  font-size: 32px;
+  font-weight: 800;
 }
 
 .progress-section {
@@ -697,47 +765,53 @@ onMounted(() => {
 
 .support-btn {
   width: 100%;
-  height: 50px;
-  font-size: 18px;
+  height: 60px;
+  font-size: 20px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  letter-spacing: 0.02em;
 }
 
 .project-content {
-  background: #fff;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  background: var(--bg-surface);
+  padding: 40px;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
 }
 
 .html-content {
   line-height: 1.8;
-  color: #333;
+  font-size: 16px;
+  color: var(--text-primary);
 }
 .html-content img {
   max-width: 100%;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
+  margin: 24px 0;
 }
 
 /* Comment Styles */
 .comment-section {
-  padding: 20px 0;
+  padding: 32px 0;
 }
 
 .comment-input {
-  margin-bottom: 30px;
+  margin-bottom: 40px;
 }
 
 .comment-action {
-  margin-top: 10px;
+  margin-top: 16px;
   text-align: right;
 }
 
 .login-tip {
   text-align: center;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 4px;
-  margin-bottom: 30px;
-  color: #909399;
+  padding: 32px;
+  background: var(--bg-page);
+  border-radius: var(--radius-lg);
+  margin-bottom: 40px;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .comment-list {
@@ -745,58 +819,59 @@ onMounted(() => {
 }
 
 .comment-item {
-  padding: 20px 0;
-  border-bottom: 1px solid #ebeef5;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .comment-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .comment-user {
-  font-weight: bold;
-  color: #303133;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .comment-time {
-  color: #909399;
-  font-size: 12px;
+  color: var(--text-tertiary);
+  font-size: 13px;
 }
 
 .comment-content {
-  color: #606266;
+  color: var(--text-secondary);
   line-height: 1.6;
-  margin-bottom: 10px;
+  font-size: 15px;
+  margin-bottom: 16px;
   word-break: break-all;
 }
 
 .comment-footer {
   display: flex;
-  gap: 15px;
+  gap: 20px;
 }
 
 .reply-input {
-  margin-top: 15px;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 4px;
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--bg-page);
+  border-radius: var(--radius-md);
 }
 
 .reply-action {
-  margin-top: 10px;
+  margin-top: 12px;
   text-align: right;
 }
 
 .reply-list {
-  margin-top: 15px;
-  padding-left: 20px;
-  border-left: 2px solid #ebeef5;
+  margin-top: 20px;
+  padding-left: 24px;
+  border-left: 3px solid var(--border-color);
 }
 
 .reply-item {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .reply-item:last-child {
@@ -806,64 +881,73 @@ onMounted(() => {
 .reply-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
 }
 
 .reply-user {
-  font-weight: bold;
-  font-size: 13px;
-  color: #303133;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
 }
 
 .reply-time {
-  color: #909399;
+  color: var(--text-tertiary);
   font-size: 12px;
 }
 
 .reply-content {
-  color: #606266;
+  color: var(--text-secondary);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .pagination-container {
-  margin-top: 30px;
+  margin-top: 40px;
   display: flex;
   justify-content: center;
 }
+
 /* Responsive adjustments */
-@media (max-width: 992px) {
+@media (max-width: 1024px) {
   .project-header {
     flex-direction: column;
-    gap: 20px;
+    gap: 32px;
   }
   .media-section {
     flex: none;
     width: 100%;
   }
   .main-media {
-    height: 300px;
+    height: 360px;
   }
 }
 
 @media (max-width: 768px) {
   .main-content {
-    margin: 15px auto;
+    margin: 20px auto;
+    padding: 0 16px;
   }
   .project-header {
-    padding: 15px;
+    padding: 24px;
   }
   .title {
-    font-size: 22px;
+    font-size: 28px;
   }
   .main-media {
-    height: 200px;
+    height: 240px;
   }
   .rewards-grid {
     grid-template-columns: 1fr;
   }
   .project-content {
-    padding: 15px;
+    padding: 24px;
+  }
+  .funding-progress-section {
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .funding-progress-section .section-header h2 {
+    font-size: 22px;
   }
   .funding-chart-container {
     height: 250px;

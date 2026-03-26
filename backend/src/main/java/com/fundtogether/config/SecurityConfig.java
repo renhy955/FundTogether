@@ -35,6 +35,7 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/user/register", "/api/user/login", "/api/user/reset-password").permitAll()
                 .requestMatchers("/api/public/**", "/api/comment/project/**", "/api/projects/recommend", "/api/projects/*/rewards", "/api/notices/active").permitAll()
+                .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/sponsor/**").hasAnyRole("SPONSOR", "ADMIN")
                 .anyRequest().authenticated()

@@ -1,15 +1,15 @@
 <template>
   <div class="admin-dashboard">
     <el-container class="admin-container">
-      <el-aside :width="isMobile ? '100%' : '200px'" class="admin-sidebar">
+      <el-aside :width="isMobile ? '100%' : '240px'" class="admin-sidebar">
+        <div v-if="!isMobile" class="sidebar-header">
+          <h2>管理后台</h2>
+        </div>
         <el-menu
           :default-active="activeMenu"
           :mode="isMobile ? 'horizontal' : 'vertical'"
           class="admin-menu"
           router
-          background-color="#304156"
-          text-color="#bfcbd9"
-          active-text-color="#409eff"
         >
           <el-menu-item index="/admin/dashboard">
             <span>数据大盘</span>
@@ -58,23 +58,66 @@ onUnmounted(() => {
 <style scoped>
 .admin-dashboard {
   /* subtract header height to prevent scrollbar */
-  height: calc(100vh - 64px);
-  margin: -30px -20px; /* remove main layout padding */
+  height: calc(100vh - 72px);
+  width: 100%;
+  display: flex;
 }
 .admin-container {
   height: 100%;
+  width: 100%;
 }
 .admin-sidebar {
-  background-color: #304156;
+  background-color: var(--bg-surface);
   transition: width 0.3s;
+  border-right: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 24px 20px 12px;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 8px;
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
 }
 .admin-menu {
   border-right: none;
+  background-color: transparent;
 }
 .admin-main {
-  padding: 0;
-  background-color: #f0f2f5;
+  padding: 24px;
+  background-color: var(--bg-page);
   overflow-y: auto;
+}
+
+/* Customizing the menu items for a more modern look */
+:deep(.el-menu-item) {
+  margin: 8px 12px;
+  border-radius: var(--radius-md);
+  height: 48px;
+  line-height: 48px;
+  color: var(--text-secondary);
+}
+
+:deep(.el-menu-item.is-active) {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+:deep(.el-menu-item:hover:not(.is-active)) {
+  background-color: var(--border-light);
+  color: var(--text-primary);
 }
 
 @media (max-width: 768px) {
@@ -83,14 +126,23 @@ onUnmounted(() => {
   }
   .admin-sidebar {
     height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
   }
   .admin-menu {
     display: flex;
     overflow-x: auto;
     white-space: nowrap;
+    padding: 8px;
+  }
+  :deep(.el-menu-item) {
+    margin: 0 4px;
   }
   .admin-menu::-webkit-scrollbar {
     display: none;
+  }
+  .admin-main {
+    padding: 16px;
   }
 }
 </style>

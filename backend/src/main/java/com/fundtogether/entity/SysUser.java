@@ -32,6 +32,18 @@ public class SysUser {
     
     private String bio;
     
+    private String education;
+    
+    private java.time.LocalDate birthday;
+    
+    private String company;
+    
+    private String profession;
+    
+    private String location;
+    
+    private Integer gender;
+    
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     

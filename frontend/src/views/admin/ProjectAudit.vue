@@ -1,6 +1,6 @@
 <template>
   <div class="project-audit-container">
-    <el-card>
+    <el-card class="audit-card">
       <template #header>
         <div class="card-header">
           <span>项目审计管理</span>
@@ -229,20 +229,41 @@ const handleTakedown = async () => {
 
 <style scoped>
 .project-audit-container {
-  padding: 20px;
+  padding: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease-out;
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.audit-card {
+  border-radius: var(--radius-lg);
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
 .table-wrapper {
   overflow-x: auto;
 }
 .pagination-container {
-  margin-top: 20px;
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
 }
 
 @media (max-width: 768px) {
   .project-audit-container {
-    padding: 10px;
+    padding: 0;
   }
   .pagination-container {
     justify-content: center;

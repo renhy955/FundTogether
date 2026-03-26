@@ -1,6 +1,6 @@
 <template>
   <div class="notice-manage">
-    <el-card>
+    <el-card class="notice-card">
       <template #header>
         <div class="header">
           <span>系统通知管理</span>
@@ -70,13 +70,9 @@ const fetchNotices = async () => {
   loading.value = true
   try {
     const res: any = await request.get('/admin/notices')
-    notices.value = res.data.records || res.data || []
+    notices.value = res.data?.records || res.data || []
   } catch (e) {
-    // Mock data for display if API not ready
-    notices.value = [
-      { id: 1, title: '系统维护通知', content: '今晚12点进行系统升级维护', status: 1, createdAt: '2023-10-01 12:00:00' },
-      { id: 2, title: '新功能上线', content: '现已支持查看全量项目数据', status: 0, createdAt: '2023-10-02 09:00:00' }
-    ]
+    ElMessage.error('获取通知列表失败')
   } finally {
     loading.value = false
   }
@@ -106,9 +102,7 @@ const submitNotice = async () => {
     dialogVisible.value = false
     fetchNotices()
   } catch (e) {
-    ElMessage.success('保存成功 (Mock)')
-    dialogVisible.value = false
-    fetchNotices()
+    ElMessage.error('保存失败')
   }
 }
 
@@ -118,7 +112,7 @@ const publishNotice = async (id: number) => {
     ElMessage.success('发布成功')
     fetchNotices()
   } catch (e) {
-    ElMessage.success('发布成功 (Mock)')
+    ElMessage.error('发布失败')
   }
 }
 
@@ -129,8 +123,7 @@ const deleteNotice = async (id: number) => {
       ElMessage.success('删除成功')
       fetchNotices()
     } catch (e) {
-      ElMessage.success('删除成功 (Mock)')
-      fetchNotices()
+      ElMessage.error('删除失败')
     }
   }).catch(() => {})
 }
@@ -138,26 +131,43 @@ const deleteNotice = async (id: number) => {
 
 <style scoped>
 .notice-manage {
-  padding: 20px;
+  padding: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease-out;
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notice-card {
+  border-radius: var(--radius-lg);
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
+.header span {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
 @media (max-width: 768px) {
   .notice-manage {
-    padding: 10px;
+    padding: 0;
   }
   .header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
-  }
-  .header h2 {
-    font-size: 18px;
-    margin: 0;
+    gap: 16px;
   }
 }
 </style>
