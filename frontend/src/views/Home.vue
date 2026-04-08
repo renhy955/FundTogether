@@ -2,8 +2,8 @@
   <div class="home-container">
     <main class="main-content">
       <div class="hero-section">
-        <h1 class="hero-title">发现并支持你喜爱的创新项目</h1>
-        <p class="hero-subtitle">在这里，每一个微小的想法都能汇聚成改变世界的力量。</p>
+        <h1 class="hero-title">{{ t('home.heroTitle') }}</h1>
+        <p class="hero-subtitle">{{ t('home.heroSubtitle') }}</p>
       </div>
 
       <div class="content-layout">
@@ -12,7 +12,7 @@
           
           <!-- Recommended Section -->
           <div class="section-header" v-if="recommendedProjects.length > 0">
-            <h2>为你推荐</h2>
+            <h2>{{ t('home.recommended') }}</h2>
           </div>
           <div class="project-grid" v-loading="recommendLoading" v-if="recommendedProjects.length > 0">
             <el-card 
@@ -22,7 +22,7 @@
               @click="goToDetail(item.id)"
               shadow="hover"
             >
-              <div class="recommend-badge">推荐</div>
+              <div class="recommend-badge">{{ t('home.recommendBadge') }}</div>
               <img :src="item.coverImage" class="project-image" />
               <div class="project-info">
                 <h3 class="project-title">{{ item.title }}</h3>
@@ -39,15 +39,15 @@
                 <div class="project-stats">
                   <div class="stat-item">
                     <span class="stat-value">￥{{ item.currentAmount }}</span>
-                    <span class="stat-label">已筹金额</span>
+                    <span class="stat-label">{{ t('home.raised') }}</span>
                   </div>
                   <div class="stat-item">
                     <span class="stat-value">{{ item.supporterCount }}</span>
-                    <span class="stat-label">支持人数</span>
+                    <span class="stat-label">{{ t('home.supporters') }}</span>
                   </div>
                   <div class="stat-item">
                     <span class="stat-value">{{ calculateRemainingDays(item.endTime) }}</span>
-                    <span class="stat-label">剩余天数</span>
+                    <span class="stat-label">{{ t('home.daysLeft') }}</span>
                   </div>
                 </div>
               </div>
@@ -55,33 +55,33 @@
           </div>
 
           <div class="section-header" style="margin-top: 20px;">
-            <h2>全部项目</h2>
+            <h2>{{ t('home.allProjects') }}</h2>
             <div class="filter-bar">
-              <el-input v-model="keyword" placeholder="搜索项目标题或简介" clearable @clear="fetchProjects" @keyup.enter="fetchProjects" style="width: 200px; margin-right: 10px;">
+              <el-input v-model="keyword" :placeholder="t('home.searchPlaceholder')" clearable @clear="fetchProjects" @keyup.enter="fetchProjects" style="width: 200px; margin-right: 10px;">
                 <template #prefix>
                   <el-icon><Search /></el-icon>
                 </template>
               </el-input>
-              <el-select v-model="categoryId" placeholder="全部分类" clearable @change="fetchProjects" style="width: 120px; margin-right: 10px;">
-                <el-option label="科技创新" :value="1" />
-                <el-option label="公益助农" :value="2" />
-                <el-option label="文化艺术" :value="3" />
+              <el-select v-model="categoryId" :placeholder="t('home.allCategories')" clearable @change="fetchProjects" style="width: 120px; margin-right: 10px;">
+                <el-option :label="t('home.categoryTech')" :value="1" />
+                <el-option :label="t('home.categoryCharity')" :value="2" />
+                <el-option :label="t('home.categoryArt')" :value="3" />
               </el-select>
-              <el-select v-model="amountRange" placeholder="目标金额" clearable @change="handleAmountChange" style="width: 120px; margin-right: 10px;">
-                <el-option label="1万以下" value="0-10000" />
-                <el-option label="1万-5万" value="10000-50000" />
-                <el-option label="5万-10万" value="50000-100000" />
-                <el-option label="10万以上" value="100000-" />
+              <el-select v-model="amountRange" :placeholder="t('home.targetAmount')" clearable @change="handleAmountChange" style="width: 120px; margin-right: 10px;">
+                <el-option :label="t('home.under10k')" value="0-10000" />
+                <el-option :label="t('home.between10k50k')" value="10000-50000" />
+                <el-option :label="t('home.between50k100k')" value="50000-100000" />
+                <el-option :label="t('home.above100k')" value="100000-" />
               </el-select>
-              <el-select v-model="progressRange" placeholder="筹款进度" clearable @change="handleProgressChange" style="width: 120px; margin-right: 10px;">
-                <el-option label="50%以下" value="0-50" />
-                <el-option label="50%-100%" value="50-100" />
-                <el-option label="已达标(100%+)" value="100-" />
+              <el-select v-model="progressRange" :placeholder="t('home.progress')" clearable @change="handleProgressChange" style="width: 120px; margin-right: 10px;">
+                <el-option :label="t('home.under50')" value="0-50" />
+                <el-option :label="t('home.between50and100')" value="50-100" />
+                <el-option :label="t('home.reached100')" value="100-" />
               </el-select>
-              <el-select v-model="sortType" placeholder="排序方式" @change="fetchProjects" style="width: 150px">
-                <el-option label="默认排序(热度)" :value="1" />
-                <el-option label="最新上线" :value="2" />
-                <el-option label="金额最高" :value="3" />
+              <el-select v-model="sortType" :placeholder="t('home.sortType')" @change="fetchProjects" style="width: 150px">
+                <el-option :label="t('home.sortHot')" :value="1" />
+                <el-option :label="t('home.sortNew')" :value="2" />
+                <el-option :label="t('home.sortAmount')" :value="3" />
               </el-select>
             </div>
           </div>
@@ -97,7 +97,7 @@
               <div class="image-wrapper">
                 <img :src="item.coverImage" class="project-image" />
                 <div class="status-badge" v-if="item.status === 5 || (item.status === 1 && item.currentAmount >= item.targetAmount)">
-                  筹款成功
+                  {{ t('home.successStatus') }}
                 </div>
               </div>
               <div class="project-info">
@@ -115,15 +115,15 @@
                 <div class="project-stats">
                   <div class="stat-item">
                     <span class="stat-value">￥{{ item.currentAmount }}</span>
-                    <span class="stat-label">已筹金额</span>
+                    <span class="stat-label">{{ t('home.raised') }}</span>
                   </div>
                   <div class="stat-item">
                     <span class="stat-value">{{ item.supporterCount }}</span>
-                    <span class="stat-label">支持人数</span>
+                    <span class="stat-label">{{ t('home.supporters') }}</span>
                   </div>
                   <div class="stat-item">
                     <span class="stat-value">{{ calculateRemainingDays(item.endTime) }}</span>
-                    <span class="stat-label">剩余天数</span>
+                    <span class="stat-label">{{ t('home.daysLeft') }}</span>
                   </div>
                 </div>
               </div>
@@ -140,7 +140,7 @@
               @current-change="fetchProjects"
             />
           </div>
-          <el-empty v-else-if="!loading" description="暂无在线项目" />
+          <el-empty v-else-if="!loading" :description="t('common.noData')" />
         </div>
 
         <!-- Sidebar / Leaderboard -->
@@ -148,10 +148,10 @@
           <el-card class="leaderboard-card" shadow="never">
             <template #header>
               <div class="leaderboard-header">
-                <h3><el-icon><Trophy /></el-icon> 热门项目排行榜</h3>
+                <h3><el-icon><Trophy /></el-icon> {{ t('home.leaderboardTitle') }}</h3>
                 <el-select v-model="leaderboardSort" size="small" style="width: 100px" @change="fetchLeaderboard">
-                  <el-option label="按热度" :value="1" />
-                  <el-option label="按金额" :value="3" />
+                  <el-option :label="t('home.byHeat')" :value="1" />
+                  <el-option :label="t('home.byAmount')" :value="3" />
                 </el-select>
               </div>
             </template>
@@ -166,14 +166,14 @@
                 <div class="image-wrapper-small">
                   <img :src="item.coverImage" class="item-image" />
                   <div class="status-badge-small" v-if="item.status === 5 || (item.status === 1 && item.currentAmount >= item.targetAmount)">
-                    成功
+                    {{ t('home.successStatus') }}
                   </div>
                 </div>
                 <div class="lb-info">
                   <div class="lb-title">{{ item.title }}</div>
                   <div class="lb-stats">
-                    <span>已筹: ￥{{ item.currentAmount }}</span>
-                    <span style="margin-left: 10px;">热度: {{ item.heat || 0 }}</span>
+                    <span>{{ t('home.raised') }}: ￥{{ item.currentAmount }}</span>
+                    <span style="margin-left: 10px;">{{ t('home.heat') }}: {{ item.heat || 0 }}</span>
                   </div>
                 </div>
               </div>
@@ -189,7 +189,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Trophy } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import request from '../utils/request'
+
+const { t } = useI18n()
 
 const router = useRouter()
 

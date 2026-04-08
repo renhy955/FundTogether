@@ -1,16 +1,34 @@
 <template>
   <div class="register-container">
+    <div class="top-nav">
+      <el-dropdown @command="handleSetLanguage" style="margin-right: 12px; cursor: pointer;">
+        <span class="el-dropdown-link" style="display: flex; align-items: center; color: var(--text-primary);">
+          {{ t('common.language') }}
+          <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+        </span>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="zh" :disabled="locale === 'zh'">中文</el-dropdown-item>
+            <el-dropdown-item command="en" :disabled="locale === 'en'">English</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+      
+      <a href="https://github.com/guoJiaQi-123/FundTogether" target="_blank" class="github-link" title="GitHub">
+        <svg viewBox="0 0 1024 1024" width="22" height="22" style="margin-top: 5px;"><path d="M511.6 76.3C264.3 76.2 64 276.4 64 523.5 64 718.9 189.3 885 363.8 946c23.5 5.9 19.9-10.8 19.9-22.2v-77.5c-135.7 15.9-141.2-73.9-150.3-88.9C215 726 171.5 718 184.5 703c30.9-15.9 62.4 4 98.9 57.9 26.4 39.1 77.9 32.5 104 26 5.7-23.5 17.9-44.5 34.7-60.8-140.6-25.2-199.2-111-199.2-213 0-49.5 16.3-95 48.3-131.7-20.4-60.5 1.9-112.3 4.9-120 58.1-5.2 118.5 41.6 123.2 45.3 33-8.9 70.7-13.6 112.9-13.6 42.4 0 80.2 4.9 113.5 13.9 11.3-8.6 67.3-48.8 121.3-43.9 2.9 7.7 24.7 58.3 5.5 118 32.4 36.8 48.9 82.7 48.9 132.3 0 102.2-59 188.1-200 212.9 23.5 23.2 38.1 55.4 38.1 91v112.5c0.8 9 0 27.9 22.4 22.4C835 885 960 719 960 523.6 960 276.4 759.7 76.3 511.6 76.3z" fill="var(--text-primary)"></path></svg>
+      </a>
+    </div>
     <div class="register-wrapper">
       <div class="register-illustration">
         <div class="illustration-content">
-          <h1>Start Your Journey</h1>
-          <p>Create an account to back projects or launch your own.</p>
+          <h1>{{ t('register.journeyTitle') }}</h1>
+          <p>{{ t('register.journeySubtitle') }}</p>
         </div>
       </div>
       <div class="register-form-container">
         <div class="register-header">
-          <h2>Create Account</h2>
-          <p>Join FundTogether today</p>
+          <h2>{{ t('register.createAccount') }}</h2>
+          <p>{{ t('register.joinToday') }}</p>
         </div>
         
         <el-form 
@@ -22,15 +40,15 @@
         >
           <el-form-item prop="registerType">
             <el-radio-group v-model="registerForm.registerType" class="type-selector">
-              <el-radio-button label="phone">Phone</el-radio-button>
-              <el-radio-button label="email">Email</el-radio-button>
+              <el-radio-button label="phone">{{ t('register.phone') }}</el-radio-button>
+              <el-radio-button label="email">{{ t('register.email') }}</el-radio-button>
             </el-radio-group>
           </el-form-item>
 
           <el-form-item prop="account">
             <el-input 
               v-model="registerForm.account" 
-              :placeholder="registerForm.registerType === 'phone' ? 'Phone number' : 'Email address'"
+              :placeholder="registerForm.registerType === 'phone' ? t('register.phonePlaceholder') : t('register.emailPlaceholder')"
               size="large"
               class="custom-input"
             ></el-input>
@@ -40,7 +58,7 @@
             <el-input 
               v-model="registerForm.password" 
               type="password" 
-              placeholder="Password" 
+              :placeholder="t('register.passwordPlaceholder')" 
               show-password
               size="large"
               class="custom-input"
@@ -51,7 +69,7 @@
             <el-input 
               v-model="registerForm.confirmPassword" 
               type="password" 
-              placeholder="Confirm Password" 
+              :placeholder="t('register.confirmPassword')" 
               show-password
               size="large"
               class="custom-input"
@@ -62,30 +80,30 @@
             <div class="code-container">
               <el-input 
                 v-model="registerForm.code" 
-                placeholder="Verification code (test: 123456)"
+                :placeholder="t('register.codePlaceholder')"
                 size="large"
                 class="custom-input"
               ></el-input>
               <el-button type="primary" class="code-btn" @click="sendCode" :disabled="countdown > 0" size="large" plain>
-                {{ countdown > 0 ? `${countdown}s` : 'Get Code' }}
+                {{ countdown > 0 ? `${countdown}s` : t('register.getCode') }}
               </el-button>
             </div>
           </el-form-item>
 
           <el-form-item prop="agreement" class="agreement-item">
             <el-checkbox v-model="registerForm.agreement">
-              I agree to the <el-link type="primary" :underline="false">Terms of Service</el-link>
+              {{ t('register.agreeTo') }} <el-link type="primary" :underline="false">{{ t('register.terms') }}</el-link>
             </el-checkbox>
           </el-form-item>
 
           <el-form-item>
             <el-button type="primary" class="submit-btn" @click="submitForm(registerFormRef)" :loading="loading" size="large">
-              Create Account
+              {{ t('register.submit') }}
             </el-button>
           </el-form-item>
 
           <div class="login-link">
-            Already have an account? <router-link to="/login">Sign In</router-link>
+            {{ t('register.hasAccount') }} <router-link to="/login">{{ t('register.signIn') }}</router-link>
           </div>
         </el-form>
       </div>
@@ -94,11 +112,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import { registerUser } from '../api/user'
+
+const { t, locale } = useI18n()
+
+const handleSetLanguage = (lang: string) => {
+  locale.value = lang
+  localStorage.setItem('language', lang)
+}
 
 const router = useRouter()
 const registerFormRef = ref<FormInstance>()
@@ -116,18 +143,18 @@ const registerForm = reactive({
 
 const validateAccount = (_rule: any, value: any, callback: any) => {
   if (value === '') {
-    callback(new Error(`请输入${registerForm.registerType === 'phone' ? '手机号' : '邮箱'}`))
+    callback(new Error(registerForm.registerType === 'phone' ? t('register.enterPhone') : t('register.enterEmail')))
   } else {
     if (registerForm.registerType === 'phone') {
       const phoneReg = /^1[3-9]\d{9}$/
       if (!phoneReg.test(value)) {
-        callback(new Error('手机号格式不正确'))
+        callback(new Error(t('register.invalidPhone')))
         return
       }
     } else {
       const emailReg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
       if (!emailReg.test(value)) {
-        callback(new Error('邮箱格式不正确'))
+        callback(new Error(t('register.invalidEmail')))
         return
       }
     }
@@ -137,9 +164,9 @@ const validateAccount = (_rule: any, value: any, callback: any) => {
 
 const validatePass2 = (_rule: any, value: any, callback: any) => {
   if (value === '') {
-    callback(new Error('请再次输入密码'))
+    callback(new Error(t('register.enterConfirm')))
   } else if (value !== registerForm.password) {
-    callback(new Error('两次输入密码不一致!'))
+    callback(new Error(t('register.passwordMismatch')))
   } else {
     callback()
   }
@@ -147,37 +174,37 @@ const validatePass2 = (_rule: any, value: any, callback: any) => {
 
 const validateAgreement = (_rule: any, value: any, callback: any) => {
   if (!value) {
-    callback(new Error('请勾选平台用户协议'))
+    callback(new Error(t('register.checkAgreement')))
   } else {
     callback()
   }
 }
 
-const rules = reactive<FormRules>({
+const rules = computed<FormRules>(() => ({
   account: [
     { required: true, validator: validateAccount, trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' }
+    { required: true, message: t('register.enterPassword'), trigger: 'blur' },
+    { min: 6, max: 20, message: t('register.passwordLength'), trigger: 'blur' }
   ],
   confirmPassword: [
     { required: true, validator: validatePass2, trigger: 'blur' }
   ],
   code: [
-    { required: true, message: '请输入验证码', trigger: 'blur' }
+    { required: true, message: t('register.enterCode'), trigger: 'blur' }
   ],
   agreement: [
     { validator: validateAgreement, trigger: 'change' }
   ]
-})
+}))
 
 const sendCode = () => {
   if (!registerForm.account) {
-    ElMessage.warning(`请先输入${registerForm.registerType === 'phone' ? '手机号' : '邮箱'}`)
+    ElMessage.warning(registerForm.registerType === 'phone' ? t('register.enterPhone') : t('register.enterEmail'))
     return
   }
-  ElMessage.success('验证码发送成功，测试请填写 123456')
+  ElMessage.success(t('register.codeSent'))
   countdown.value = 60
   const timer = setInterval(() => {
     countdown.value--
@@ -200,7 +227,7 @@ const submitForm = async (formEl: FormInstance | undefined) => {
           confirmPassword: registerForm.confirmPassword,
           code: registerForm.code
         })
-        ElMessage.success('注册成功')
+        ElMessage.success(t('register.success'))
         router.push('/login')
       } catch (error) {
         // Error is handled in request interceptor
@@ -220,6 +247,16 @@ const submitForm = async (formEl: FormInstance | undefined) => {
   min-height: 100vh;
   background-color: var(--bg-page);
   padding: 20px;
+  position: relative;
+}
+
+.top-nav {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  display: flex;
+  align-items: center;
+  z-index: 10;
 }
 
 .register-wrapper {

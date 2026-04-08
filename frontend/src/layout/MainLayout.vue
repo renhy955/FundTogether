@@ -7,17 +7,34 @@
           FundTogether
         </div>
         <nav class="nav-links" aria-label="Main Navigation">
+          <el-dropdown @command="handleSetLanguage" style="margin-right: 12px; cursor: pointer;">
+            <span class="el-dropdown-link" style="display: flex; align-items: center;">
+              {{ t('common.language') }}
+              <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="zh" :disabled="locale === 'zh'">中文</el-dropdown-item>
+                <el-dropdown-item command="en" :disabled="locale === 'en'">English</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          
+          <a href="https://github.com/guoJiaQi-123/FundTogether" target="_blank" class="github-link" title="GitHub">
+            <svg viewBox="0 0 1024 1024" width="22" height="22" style="margin-right: 12px; margin-top: 5px;"><path d="M511.6 76.3C264.3 76.2 64 276.4 64 523.5 64 718.9 189.3 885 363.8 946c23.5 5.9 19.9-10.8 19.9-22.2v-77.5c-135.7 15.9-141.2-73.9-150.3-88.9C215 726 171.5 718 184.5 703c30.9-15.9 62.4 4 98.9 57.9 26.4 39.1 77.9 32.5 104 26 5.7-23.5 17.9-44.5 34.7-60.8-140.6-25.2-199.2-111-199.2-213 0-49.5 16.3-95 48.3-131.7-20.4-60.5 1.9-112.3 4.9-120 58.1-5.2 118.5 41.6 123.2 45.3 33-8.9 70.7-13.6 112.9-13.6 42.4 0 80.2 4.9 113.5 13.9 11.3-8.6 67.3-48.8 121.3-43.9 2.9 7.7 24.7 58.3 5.5 118 32.4 36.8 48.9 82.7 48.9 132.3 0 102.2-59 188.1-200 212.9 23.5 23.2 38.1 55.4 38.1 91v112.5c0.8 9 0 27.9 22.4 22.4C835 885 960 719 960 523.6 960 276.4 759.7 76.3 511.6 76.3z" fill="var(--text-primary)"></path></svg>
+          </a>
+
           <span v-if="userStore.token" class="user-greeting">
-            你好，{{ userStore.userInfo?.nickname || userStore.userInfo?.account }}
+            {{ locale === 'zh' ? '你好，' : 'Hello, ' }}{{ userStore.userInfo?.nickname || userStore.userInfo?.account }}
           </span>
           <el-button 
             :type="route.path.startsWith('/projects') ? 'primary' : 'text'" 
             class="nav-btn" 
             @click="router.push('/projects')"
-          >项目探索</el-button>
+          >{{ t('common.projects') }}</el-button>
           
           <template v-if="!userStore.token">
-            <el-button text @click="router.push('/login')">登录</el-button>
+            <el-button text @click="router.push('/login')">{{ t('common.login') }}</el-button>
           </template>
 
           <template v-else>
@@ -26,29 +43,29 @@
               :type="route.path.startsWith('/admin') ? 'primary' : 'text'" 
               class="nav-btn" 
               @click="router.push('/admin')"
-            >管理后台</el-button>
+            >{{ t('common.admin') }}</el-button>
             <el-button 
               v-if="userStore.userInfo?.role === 2" 
               :type="route.path.startsWith('/sponsor/projects') ? 'primary' : 'text'" 
               class="nav-btn" 
               @click="router.push('/sponsor/projects')"
-            >我的项目</el-button>
+            >{{ locale === 'zh' ? '我的项目' : 'My Projects' }}</el-button>
             <el-button 
               :type="route.path.startsWith('/user/orders') ? 'primary' : 'text'" 
               class="nav-btn" 
               @click="router.push('/user/orders')"
-            >我的支持</el-button>
+            >{{ locale === 'zh' ? '我的支持' : 'My Support' }}</el-button>
             <el-button 
               :type="route.path.startsWith('/user/messages') ? 'primary' : 'text'" 
               class="nav-btn" 
               @click="router.push('/user/messages')"
-            >消息</el-button>
+            >{{ locale === 'zh' ? '消息' : 'Messages' }}</el-button>
             <el-button 
               :type="route.path.startsWith('/user/profile') ? 'primary' : 'text'" 
               class="nav-btn" 
               @click="router.push('/user/profile')"
-            >个人主页</el-button>
-            <el-button text type="danger" @click="logout">退出登录</el-button>
+            >{{ t('common.profile') }}</el-button>
+            <el-button text type="danger" @click="logout">{{ t('common.logout') }}</el-button>
           </template>
         </nav>
       </div>
@@ -64,6 +81,15 @@ import { useUserStore } from '../store/user'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElNotification } from 'element-plus'
 import { onMounted, onUnmounted, watch, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { ArrowDown } from '@element-plus/icons-vue'
+
+const { t, locale } = useI18n()
+
+const handleSetLanguage = (lang: string) => {
+  locale.value = lang
+  localStorage.setItem('language', lang)
+}
 
 const userStore = useUserStore()
 const router = useRouter()
