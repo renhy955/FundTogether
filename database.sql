@@ -11,11 +11,124 @@
  Target Server Version : 80408 (8.4.8)
  File Encoding         : 65001
 
- Date: 26/03/2026 15:53:43
+ Date: 04/04/2026 11:59:53
 */
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for fund_account
+-- ----------------------------
+DROP TABLE IF EXISTS `fund_account`;
+CREATE TABLE `fund_account` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `project_id` bigint NOT NULL COMMENT '项目ID',
+  `total_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '总筹款金额',
+  `frozen_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '托管中金额(冻结)',
+  `available_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '可拨付金额(解冻)',
+  `paid_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '已拨付金额',
+  `refunded_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '已退款金额',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '账户状态: 0-正常筹款中, 1-结算成功(可拨付), 2-结算失败(需退款)',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '逻辑删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_project_id` (`project_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目资金托管账户表';
+
+-- ----------------------------
+-- Records of fund_account
+-- ----------------------------
+BEGIN;
+COMMIT;
+
+-- ----------------------------
+-- Table structure for fund_ledger
+-- ----------------------------
+DROP TABLE IF EXISTS `fund_ledger`;
+CREATE TABLE `fund_ledger` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `project_id` bigint NOT NULL COMMENT '项目ID',
+  `user_id` bigint DEFAULT NULL COMMENT '关联用户ID(如果是用户支付/退款)',
+  `order_no` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '关联业务单号(支付单号/拨付单号)',
+  `type` tinyint NOT NULL COMMENT '交易类型: 1-用户支付(入账), 2-失败退款(出账), 3-阶段拨付(出账)',
+  `amount` decimal(10,2) NOT NULL COMMENT '交易金额',
+  `balance` decimal(10,2) NOT NULL COMMENT '交易后项目账户总余额',
+  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '交易备注',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '交易时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '逻辑删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_project_id` (`project_id`),
+  KEY `idx_order_no` (`order_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资金交易流水表(透明可追溯)';
+
+-- ----------------------------
+-- Records of fund_ledger
+-- ----------------------------
+BEGIN;
+COMMIT;
+
+-- ----------------------------
+-- Table structure for fund_payout_phase
+-- ----------------------------
+DROP TABLE IF EXISTS `fund_payout_phase`;
+CREATE TABLE `fund_payout_phase` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `project_id` bigint NOT NULL COMMENT '项目ID',
+  `phase_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '阶段名称(如: 首期30%, 中期40%, 尾款30%)',
+  `phase_index` int NOT NULL COMMENT '阶段序号(1,2,3...)',
+  `payout_ratio` decimal(5,2) NOT NULL COMMENT '拨付比例(百分比)',
+  `payout_amount` decimal(10,2) NOT NULL COMMENT '应拨付金额',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态: 0-待申请, 1-审核中, 2-已拨付, 3-已驳回',
+  `audit_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '审核/驳回原因',
+  `apply_time` datetime DEFAULT NULL COMMENT '申请时间',
+  `pay_time` datetime DEFAULT NULL COMMENT '拨付时间',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '逻辑删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_project_id` (`project_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目分阶段拨付表';
+
+-- ----------------------------
+-- Records of fund_payout_phase
+-- ----------------------------
+BEGIN;
+COMMIT;
+
+-- ----------------------------
+-- Table structure for funding_ledger
+-- ----------------------------
+DROP TABLE IF EXISTS `funding_ledger`;
+CREATE TABLE `funding_ledger` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `project_id` bigint NOT NULL COMMENT '关联项目ID',
+  `order_id` bigint DEFAULT NULL COMMENT '关联订单ID(如果是用户支付/退款)',
+  `user_id` bigint NOT NULL COMMENT '交易涉及的用户ID(支持者或发起人)',
+  `amount` decimal(10,2) NOT NULL COMMENT '交易金额',
+  `type` tinyint NOT NULL COMMENT '交易类型: 1-用户支付, 2-平台退款, 3-阶段拨付给发起人',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态: 0-处理中, 1-成功, 2-失败',
+  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '备注/交易流水号',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '逻辑删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_project_id` (`project_id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资金交易流水表(资金隔离/透明可追溯)';
+
+-- ----------------------------
+-- Records of funding_ledger
+-- ----------------------------
+BEGIN;
+INSERT INTO `funding_ledger` (`id`, `project_id`, `order_id`, `user_id`, `amount`, `type`, `status`, `remark`, `created_at`, `updated_at`, `deleted`) VALUES (1, 1, 1, 2, 100.00, 2, 1, '项目筹款失败自动退款，原订单号：ORD20231015001', '2026-03-30 16:58:00', '2026-03-30 16:58:00', 0);
+INSERT INTO `funding_ledger` (`id`, `project_id`, `order_id`, `user_id`, `amount`, `type`, `status`, `remark`, `created_at`, `updated_at`, `deleted`) VALUES (2, 23, 25, 1, 60.00, 2, 1, '项目筹款失败自动退款，原订单号：e681448a08834a83bb522e5585825454', '2026-03-30 16:58:00', '2026-03-30 16:58:00', 0);
+INSERT INTO `funding_ledger` (`id`, `project_id`, `order_id`, `user_id`, `amount`, `type`, `status`, `remark`, `created_at`, `updated_at`, `deleted`) VALUES (3, 23, 26, 1, 60.00, 2, 1, '项目筹款失败自动退款，原订单号：3362003afb464810b52a12a52cdd3d7f', '2026-03-30 16:58:00', '2026-03-30 16:58:00', 0);
+INSERT INTO `funding_ledger` (`id`, `project_id`, `order_id`, `user_id`, `amount`, `type`, `status`, `remark`, `created_at`, `updated_at`, `deleted`) VALUES (4, 23, 27, 1, 60.00, 2, 1, '项目筹款失败自动退款，原订单号：e5a63b33dcc34e4e8b7ee20945d1f4bb', '2026-03-30 16:58:00', '2026-03-30 16:58:00', 0);
+INSERT INTO `funding_ledger` (`id`, `project_id`, `order_id`, `user_id`, `amount`, `type`, `status`, `remark`, `created_at`, `updated_at`, `deleted`) VALUES (5, 21, 43, 1, 10.00, 1, 1, '支持项目支付，订单号：6ed145492b514f5bb8d0245901cdc06a', '2026-04-04 11:47:35', '2026-04-04 11:47:35', 0);
+COMMIT;
 
 -- ----------------------------
 -- Table structure for project
@@ -35,7 +148,7 @@ CREATE TABLE `project` (
   `supporter_count` int NOT NULL DEFAULT '0' COMMENT '支持人数',
   `start_time` datetime DEFAULT NULL COMMENT '开始时间',
   `end_time` datetime NOT NULL COMMENT '结束时间',
-  `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态: 0-待审核, 1-筹款中, 2-已驳回, 3-已取消, 4-已下架, 5-已完成',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态: 0-待审核, 1-筹款中, 2-已驳回, 3-已取消, 4-已下架, 5-已成功, 6-筹款失败',
   `heat` int NOT NULL DEFAULT '0' COMMENT '热度',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -47,19 +160,19 @@ CREATE TABLE `project` (
 -- Records of project
 -- ----------------------------
 BEGIN;
-INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (1, 3, 1, '智能助眠眼罩', '利用AI白噪音与温感助眠的创新眼罩', 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55', NULL, '<p>这是一款革命性的智能助眠眼罩...</p>', 50000.00, 15000.00, 120, '2023-10-01 10:00:00', '2023-11-30 23:59:59', 1, 800, '2026-03-25 00:09:03', '2026-03-25 00:09:03', 0);
-INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (2, 3, 2, '乡村儿童图书角', '为偏远地区儿童建立阅读图书角', 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8', NULL, '<p>每人献出一点爱，点亮乡村儿童的阅读梦...</p>', 10000.00, 12010.00, 301, '2023-09-01 00:00:00', '2023-10-31 23:59:59', 1, 1500, '2026-03-25 00:09:03', '2026-03-25 00:09:03', 0);
+INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (1, 3, 1, '智能助眠眼罩', '利用AI白噪音与温感助眠的创新眼罩', 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55', NULL, '<p>这是一款革命性的智能助眠眼罩...</p>', 50000.00, 15000.00, 120, '2023-10-01 10:00:00', '2023-11-30 23:59:59', 6, 800, '2026-03-25 00:09:03', '2026-03-25 00:09:03', 0);
+INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (2, 3, 2, '乡村儿童图书角', '为偏远地区儿童建立阅读图书角', 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8', NULL, '<p>每人献出一点爱，点亮乡村儿童的阅读梦...</p>', 10000.00, 12010.00, 301, '2023-09-01 00:00:00', '2023-10-31 23:59:59', 5, 1500, '2026-03-25 00:09:03', '2026-03-25 00:09:03', 0);
 INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (3, 3, 1, '便携式咖啡机(待审核)', '随时随地享受现磨咖啡', 'https://images.unsplash.com/photo-1511920170033-f8396924c348', NULL, '<p>超便携设计的电动咖啡机...</p>', 30000.00, 0.00, 0, NULL, '2024-01-31 23:59:59', 2, 0, '2026-03-25 00:09:03', '2026-03-25 00:09:03', 0);
 INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (4, 4, NULL, '1', '1', 'https://gips2.baidu.com/it/u=195724436,3554684702&fm=3028&app=3028&f=JPEG&fmt=auto?w=1280&h=960', '', '1', 10000.00, 0.00, 0, '2026-03-25 00:58:44', '2026-03-26 00:00:00', 4, 0, '2026-03-25 00:16:39', '2026-03-25 00:16:39', 0);
 INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (11, 11, 1, '待审核项目11', '这是一个待审核项目，用于测试取消和审核', 'https://example.com/cover11.jpg', NULL, '<p>详细内容</p>', 10000.00, 0.00, 0, NULL, '2026-04-24 00:43:56', 0, 0, '2026-03-25 00:43:56', '2026-03-25 00:43:56', 0);
 INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (12, 11, 1, '筹款中项目12', '这是一个筹款中的项目，用于测试下架和支持者名单', 'https://example.com/cover12.jpg', NULL, '<p>详细内容</p>', 20000.00, 0.00, 0, NULL, '2026-04-24 00:43:56', 1, 0, '2026-03-25 00:43:56', '2026-03-25 00:43:56', 0);
 INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (13, 4, NULL, '1', '1', '1', '', '1', 10000.00, 0.00, 0, NULL, '2026-03-27 00:00:00', 3, 0, '2026-03-25 00:58:00', '2026-03-25 00:58:00', 0);
-INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (21, 21, 1, '多功能智能手表', '一款具备健康监测和多重运动模式的智能手表', 'https://images.unsplash.com/photo-1579586337278-3befd40fd17a', 'https://www.w3schools.com/html/mov_bbb.mp4', '<p>具备健康监测和多重运动模式的智能手表详细介绍</p>', 100000.00, 20000.00, 2, '2026-03-25 00:00:00', '2026-05-25 00:00:00', 1, 500, '2026-03-25 00:00:00', '2026-03-25 00:00:00', 0);
+INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (21, 21, 1, '多功能智能手表', '一款具备健康监测和多重运动模式的智能手表', 'https://images.unsplash.com/photo-1579586337278-3befd40fd17a', 'https://www.w3schools.com/html/mov_bbb.mp4', '<p>具备健康监测和多重运动模式的智能手表详细介绍</p>', 100000.00, 20010.00, 3, '2026-03-25 00:00:00', '2026-05-25 00:00:00', 1, 500, '2026-03-25 00:00:00', '2026-03-25 00:00:00', 0);
 INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (22, 21, 2, '山区图书捐赠', '为偏远山区小学捐赠图书', 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570', NULL, '<p>为偏远山区小学捐赠图书详细介绍</p>', 50000.00, 5000.00, 1, '2026-03-25 00:00:00', '2026-06-25 00:00:00', 1, 300, '2026-03-25 00:00:00', '2026-03-25 00:00:00', 0);
-INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (23, 4, NULL, '123', '123', 'https://gips2.baidu.com/it/u=207216414,2485641185&fm=3028&app=3028&f=JPEG&fmt=auto?w=1280&h=720', '', '123', 10000.00, 180.00, 3, '2026-03-25 08:58:39', '2026-03-26 00:00:00', 1, 0, '2026-03-25 08:58:19', '2026-03-25 08:58:19', 0);
+INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (23, 4, NULL, '123', '123', 'https://gips2.baidu.com/it/u=207216414,2485641185&fm=3028&app=3028&f=JPEG&fmt=auto?w=1280&h=720', '', '123', 10000.00, 180.00, 3, '2026-03-25 08:58:39', '2026-03-26 00:00:00', 6, 0, '2026-03-25 08:58:19', '2026-03-25 08:58:19', 0);
 INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (39, 40, 1, '全息投影智能音箱', '未来的桌面伴侣，支持AI语音交互。', 'https://images.unsplash.com/photo-1544413660-299165566b1d', NULL, '<p>全息投影技术...</p>', 100000.00, 75000.00, 150, NULL, '2026-12-31 23:59:59', 1, 9500, '2026-03-26 15:09:47', '2026-03-26 15:09:47', 0);
 INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (40, 40, 2, '山区净水计划', '为偏远山区学校安装净水设备。', 'https://images.unsplash.com/photo-1504814532849-cff240bbc503', NULL, '<p>水是生命之源...</p>', 50000.00, 50000.00, 500, NULL, '2026-05-01 23:59:59', 5, 8200, '2026-03-26 15:09:47', '2026-03-26 15:09:47', 0);
-INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (41, 40, 3, '独立电影《远方》', '一部关于寻找自我的公路电影。', 'https://images.unsplash.com/photo-1485846234645-a62644f84728', NULL, '<p>电影简介...</p>', 200000.00, 10000.00, 20, NULL, '2026-10-01 23:59:59', 1, 3000, '2026-03-26 15:09:47', '2026-03-26 15:09:47', 0);
+INSERT INTO `project` (`id`, `sponsor_id`, `category_id`, `title`, `summary`, `cover_image`, `video_url`, `content`, `target_amount`, `current_amount`, `supporter_count`, `start_time`, `end_time`, `status`, `heat`, `created_at`, `updated_at`, `deleted`) VALUES (41, 40, 3, '独立电影《远方》', '一部关于寻找自我的公路电影。', 'https://images.unsplash.com/photo-1485846234645-a62644f84728', NULL, '<p>电影简介...</p>', 200000.00, 10001.00, 21, NULL, '2026-10-01 23:59:59', 1, 3000, '2026-03-26 15:09:47', '2026-03-26 15:09:47', 0);
 COMMIT;
 
 -- ----------------------------
@@ -83,6 +196,36 @@ BEGIN;
 INSERT INTO `project_category` (`id`, `name`, `sort`, `created_at`, `updated_at`, `deleted`) VALUES (1, '科技创新', 1, '2026-03-25 00:00:00', '2026-03-25 00:00:00', 0);
 INSERT INTO `project_category` (`id`, `name`, `sort`, `created_at`, `updated_at`, `deleted`) VALUES (2, '公益助农', 2, '2026-03-25 00:00:00', '2026-03-25 00:00:00', 0);
 INSERT INTO `project_category` (`id`, `name`, `sort`, `created_at`, `updated_at`, `deleted`) VALUES (3, '文化艺术', 3, '2026-03-25 00:00:00', '2026-03-25 00:00:00', 0);
+COMMIT;
+
+-- ----------------------------
+-- Table structure for project_payout
+-- ----------------------------
+DROP TABLE IF EXISTS `project_payout`;
+CREATE TABLE `project_payout` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `project_id` bigint NOT NULL COMMENT '项目ID',
+  `sponsor_id` bigint NOT NULL COMMENT '发起人ID',
+  `stage` tinyint NOT NULL COMMENT '拨付阶段: 1-首期, 2-中期, 3-尾期等',
+  `amount` decimal(10,2) NOT NULL COMMENT '拨付金额',
+  `payout_ratio` decimal(4,2) NOT NULL COMMENT '拨付比例(如0.30代表30%)',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '状态: 0-待拨付, 1-已拨付',
+  `condition_desc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '拨付条件说明',
+  `payout_time` datetime DEFAULT NULL COMMENT '实际拨付时间',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '逻辑删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_project_id` (`project_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目分阶段拨付表';
+
+-- ----------------------------
+-- Records of project_payout
+-- ----------------------------
+BEGIN;
+INSERT INTO `project_payout` (`id`, `project_id`, `sponsor_id`, `stage`, `amount`, `payout_ratio`, `status`, `condition_desc`, `payout_time`, `created_at`, `updated_at`, `deleted`) VALUES (1, 2, 3, 1, 3603.00, 0.30, 0, '项目众筹成功，首期拨付30%', NULL, '2026-03-30 16:58:00', '2026-03-30 16:58:00', 0);
+INSERT INTO `project_payout` (`id`, `project_id`, `sponsor_id`, `stage`, `amount`, `payout_ratio`, `status`, `condition_desc`, `payout_time`, `created_at`, `updated_at`, `deleted`) VALUES (2, 2, 3, 2, 4804.00, 0.40, 0, '项目中期汇报，中期拨付40%', NULL, '2026-03-30 16:58:00', '2026-03-30 16:58:00', 0);
+INSERT INTO `project_payout` (`id`, `project_id`, `sponsor_id`, `stage`, `amount`, `payout_ratio`, `status`, `condition_desc`, `payout_time`, `created_at`, `updated_at`, `deleted`) VALUES (3, 2, 3, 3, 3603.00, 0.30, 0, '项目回报发放完毕，尾期拨付30%', NULL, '2026-03-30 16:58:00', '2026-03-30 16:58:00', 0);
 COMMIT;
 
 -- ----------------------------
@@ -150,20 +293,20 @@ CREATE TABLE `support_order` (
   `project_id` bigint NOT NULL COMMENT '项目ID',
   `amount` decimal(10,2) NOT NULL COMMENT '支持金额',
   `message` varchar(255) DEFAULT NULL COMMENT '留言',
-  `status` tinyint NOT NULL DEFAULT '0' COMMENT '0-待支付 1-已支付 2-已取消',
+  `status` tinyint NOT NULL DEFAULT '0' COMMENT '0-待支付 1-已支付 2-已取消 3-已退款',
   `pay_channel` varchar(32) DEFAULT NULL COMMENT '支付渠道',
   `pay_time` datetime DEFAULT NULL COMMENT '支付时间',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted` tinyint NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='支持订单表';
+) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='支持订单表';
 
 -- ----------------------------
 -- Records of support_order
 -- ----------------------------
 BEGIN;
-INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (1, 'ORD20231015001', 2, 1, 100.00, '期待早日发货！', 1, 'ALIPAY', '2023-10-15 12:30:00', '2026-03-25 00:09:03', '2026-03-25 00:09:03', 0);
+INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (1, 'ORD20231015001', 2, 1, 100.00, '期待早日发货！', 3, 'ALIPAY', '2023-10-15 12:30:00', '2026-03-25 00:09:03', '2026-03-25 00:09:03', 0);
 INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (2, 'ORD20231016002', 2, 2, 50.00, '支持乡村教育', 1, 'WECHAT', '2023-10-16 09:15:00', '2026-03-25 00:09:03', '2026-03-25 00:09:03', 0);
 INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (3, 'f1bbf950064e41b6830cc660f6b872ea', 4, 2, 10.00, '', 0, NULL, NULL, '2026-03-25 00:12:25', '2026-03-25 00:12:25', 0);
 INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (4, 'c9570a62b1b34052b681884d376afed5', 4, 2, 10.00, '', 0, NULL, NULL, '2026-03-25 00:12:27', '2026-03-25 00:12:27', 0);
@@ -174,12 +317,14 @@ INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`
 INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (22, 'ORDER22', 22, 21, 19000.00, '非常支持这个项目', 1, 'ALIPAY', '2026-03-25 11:00:00', '2026-03-25 10:50:00', '2026-03-25 11:00:00', 0);
 INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (23, 'ORDER23', 22, 22, 5000.00, '为了孩子们的明天', 1, 'BANK_CARD', '2026-03-25 12:00:00', '2026-03-25 11:50:00', '2026-03-25 12:00:00', 0);
 INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (24, '6a65baf8fc3249cf8605134d61b5791b', 4, 2, 10.00, '', 1, '15', '2026-03-25 08:53:05', '2026-03-25 08:53:05', '2026-03-25 08:53:05', 0);
-INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (25, 'e681448a08834a83bb522e5585825454', 1, 23, 60.00, '', 1, '13', '2026-03-25 09:00:29', '2026-03-25 09:00:29', '2026-03-25 09:00:29', 0);
-INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (26, '3362003afb464810b52a12a52cdd3d7f', 1, 23, 60.00, '', 1, '13', '2026-03-25 09:00:33', '2026-03-25 09:00:33', '2026-03-25 09:00:33', 0);
-INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (27, 'e5a63b33dcc34e4e8b7ee20945d1f4bb', 1, 23, 60.00, '', 1, '13', '2026-03-25 09:00:35', '2026-03-25 09:00:35', '2026-03-25 09:00:35', 0);
+INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (25, 'e681448a08834a83bb522e5585825454', 1, 23, 60.00, '', 3, '13', '2026-03-25 09:00:29', '2026-03-25 09:00:29', '2026-03-25 09:00:29', 0);
+INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (26, '3362003afb464810b52a12a52cdd3d7f', 1, 23, 60.00, '', 3, '13', '2026-03-25 09:00:33', '2026-03-25 09:00:33', '2026-03-25 09:00:33', 0);
+INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (27, 'e5a63b33dcc34e4e8b7ee20945d1f4bb', 1, 23, 60.00, '', 3, '13', '2026-03-25 09:00:35', '2026-03-25 09:00:35', '2026-03-25 09:00:35', 0);
 INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (39, 'ORD20260339', 41, 39, 499.00, '支持科技创新！', 1, 'WECHAT', '2026-03-20 10:00:00', '2026-03-26 15:09:47', '2026-03-26 15:09:47', 0);
 INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (40, 'ORD20260340', 41, 40, 50.00, '尽一份绵薄之力。', 1, 'ALIPAY', '2026-03-21 11:00:00', '2026-03-26 15:09:47', '2026-03-26 15:09:47', 0);
 INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (41, 'ORD20260341', 41, 41, 100.00, '期待电影上映！', 1, 'BANK_CARD', '2026-03-22 12:00:00', '2026-03-26 15:09:47', '2026-03-26 15:09:47', 0);
+INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (42, '6eb8cceeed474e3696e4d8643717c049', 1, 41, 1.00, '', 1, '1', '2026-03-26 19:58:33', '2026-03-26 19:58:33', '2026-03-26 19:58:33', 0);
+INSERT INTO `support_order` (`id`, `order_no`, `user_id`, `project_id`, `amount`, `message`, `status`, `pay_channel`, `pay_time`, `created_at`, `updated_at`, `deleted`) VALUES (43, '6ed145492b514f5bb8d0245901cdc06a', 1, 21, 10.00, '', 1, '1', '2026-04-04 11:47:35', '2026-04-04 11:47:35', '2026-04-04 11:47:35', 0);
 COMMIT;
 
 -- ----------------------------
@@ -195,7 +340,7 @@ CREATE TABLE `sys_notice` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '逻辑删除',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='平台系统公告表';
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='平台系统公告表';
 
 -- ----------------------------
 -- Records of sys_notice
@@ -204,6 +349,9 @@ BEGIN;
 INSERT INTO `sys_notice` (`id`, `title`, `content`, `status`, `created_at`, `updated_at`, `deleted`) VALUES (1, '平台春季筹款活动正式开启', '<p>欢迎参与2026春季筹款季，多重好礼等你来拿！</p>', 1, '2026-03-26 15:09:47', '2026-03-26 15:09:47', 0);
 INSERT INTO `sys_notice` (`id`, `title`, `content`, `status`, `created_at`, `updated_at`, `deleted`) VALUES (2, '关于规范项目审核标准的通知', '<p>为了平台健康发展，我们将进一步加强项目资质审核...</p>', 1, '2026-03-26 15:09:47', '2026-03-26 15:09:47', 0);
 INSERT INTO `sys_notice` (`id`, `title`, `content`, `status`, `created_at`, `updated_at`, `deleted`) VALUES (21, '平台春季筹款活动开启', '<p>欢迎大家参与春季筹款活动！</p>', 1, '2026-03-25 00:00:00', '2026-03-25 00:00:00', 0);
+INSERT INTO `sys_notice` (`id`, `title`, `content`, `status`, `created_at`, `updated_at`, `deleted`) VALUES (22, '1', '1', 1, '2026-03-26 17:58:29', '2026-03-26 18:03:07', 1);
+INSERT INTO `sys_notice` (`id`, `title`, `content`, `status`, `created_at`, `updated_at`, `deleted`) VALUES (23, '1', '1', 1, '2026-03-26 17:58:34', '2026-03-26 18:03:06', 1);
+INSERT INTO `sys_notice` (`id`, `title`, `content`, `status`, `created_at`, `updated_at`, `deleted`) VALUES (24, '1', '<p>欢迎大家参与春季筹款活动！</p>', 1, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
 COMMIT;
 
 -- ----------------------------
@@ -225,6 +373,12 @@ CREATE TABLE `sys_user` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '逻辑删除: 0-未删除, 1-已删除',
+  `education` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '学历',
+  `birthday` date DEFAULT NULL COMMENT '生日',
+  `company` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '公司',
+  `profession` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '职业',
+  `location` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '所在地',
+  `gender` tinyint DEFAULT '0' COMMENT '性别: 0-未知, 1-男, 2-女',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_account` (`account`)
 ) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户基础信息表';
@@ -233,20 +387,20 @@ CREATE TABLE `sys_user` (
 -- Records of sys_user
 -- ----------------------------
 BEGIN;
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (1, 'admin', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '系统管理员', NULL, '13800138000', 'admin@test.com', 3, 1, NULL, NULL, '2026-03-24 23:28:47', '2026-03-24 23:53:17', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (2, 'user1', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '普通用户A', NULL, '13800138001', 'user1@test.com', 1, 1, NULL, NULL, '2026-03-24 23:28:47', '2026-03-24 23:53:51', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (3, 'sponsor1', '$2a$10$xyz', '发起人A', NULL, '13800138002', 'sponsor1@test.com', 2, 1, NULL, NULL, '2026-03-24 23:28:47', '2026-03-24 23:28:47', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (4, '17200606763', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', NULL, NULL, '17200606763', NULL, 2, 1, NULL, NULL, '2026-03-24 23:43:03', '2026-03-24 23:43:03', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (11, 'sponsor11@test.com', '$2a$10$X8mR0fN/Qd/fJ01s40QOPO/8H1/9X.w5N8E/7x4XyE/wR1m6E/O2e', 'Sponsor 11', NULL, NULL, NULL, 2, 1, NULL, NULL, '2026-03-25 00:39:47', '2026-03-25 00:39:47', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (12, 'supporter12@test.com', '$2a$10$X8mR0fN/Qd/fJ01s40QOPO/8H1/9X.w5N8E/7x4XyE/wR1m6E/O2e', 'Supporter 12', NULL, NULL, NULL, 1, 1, NULL, NULL, '2026-03-25 00:39:47', '2026-03-25 00:39:47', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (13, 'admin13@test.com', '$2a$10$X8mR0fN/Qd/fJ01s40QOPO/8H1/9X.w5N8E/7x4XyE/wR1m6E/O2e', 'Admin 13', NULL, NULL, NULL, 3, 1, NULL, NULL, '2026-03-25 00:39:47', '2026-03-25 00:39:47', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (14, 'test_sponsor@test.com', '$2a$10$oOD9EQQKX4RUsPWFbBxUC.VTq7Xzxqp/rK/gi1xGA6ra6PfS3q5QS', NULL, NULL, NULL, 'test_sponsor@test.com', 2, 1, NULL, NULL, '2026-03-25 01:40:16', '2026-03-25 01:40:43', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (21, 'sponsor21@test.com', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '发起人21', 'https://example.com/avatar21.jpg', '13800000021', 'sponsor21@test.com', 2, 1, NULL, NULL, '2026-03-25 00:00:00', '2026-03-25 00:00:00', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (22, 'supporter22@test.com', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '支持者22', 'https://example.com/avatar22.jpg', '13800000022', 'supporter22@test.com', 1, 1, NULL, NULL, '2026-03-25 00:00:00', '2026-03-25 00:00:00', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (39, 'admin39', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '超级管理员', NULL, '13800000039', NULL, 3, 1, NULL, NULL, '2026-03-26 15:08:42', '2026-03-26 15:08:42', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (40, 'sponsor40', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '明星发起人', NULL, '13800000040', NULL, 2, 1, NULL, NULL, '2026-03-26 15:08:42', '2026-03-26 15:08:42', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (41, 'user41', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '热情支持者', NULL, '13800000041', NULL, 1, 1, NULL, NULL, '2026-03-26 15:08:42', '2026-03-26 15:08:42', 0);
-INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`) VALUES (42, 'baduser42', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '违规用户', NULL, '13800000042', NULL, 1, 0, NULL, NULL, '2026-03-26 15:08:42', '2026-03-26 15:08:42', 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (1, 'admin', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '郭家旗', 'http://localhost:8080/uploads/9346fc01-2780-4186-a52a-4008ee1edf94.png', '13800138000', 'admin@test.com', 3, 1, NULL, 'hhhh', '2026-03-24 23:28:47', '2026-03-24 23:53:17', 0, '本科', '2003-11-22', '', '', '太原', 1);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (2, 'user1', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '普通用户A', NULL, '13800138001', 'user1@test.com', 1, 1, NULL, NULL, '2026-03-24 23:28:47', '2026-03-24 23:53:51', 0, NULL, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (3, 'sponsor1', '$2a$10$xyz', '发起人A', NULL, '13800138002', 'sponsor1@test.com', 2, 1, NULL, NULL, '2026-03-24 23:28:47', '2026-03-24 23:28:47', 0, NULL, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (4, '17200606763', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', NULL, NULL, '17200606763', NULL, 2, 1, NULL, NULL, '2026-03-24 23:43:03', '2026-03-24 23:43:03', 0, NULL, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (11, 'sponsor11@test.com', '$2a$10$X8mR0fN/Qd/fJ01s40QOPO/8H1/9X.w5N8E/7x4XyE/wR1m6E/O2e', 'Sponsor 11', NULL, NULL, NULL, 2, 1, NULL, NULL, '2026-03-25 00:39:47', '2026-03-25 00:39:47', 0, NULL, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (12, 'supporter12@test.com', '$2a$10$X8mR0fN/Qd/fJ01s40QOPO/8H1/9X.w5N8E/7x4XyE/wR1m6E/O2e', 'Supporter 12', NULL, NULL, NULL, 1, 1, NULL, NULL, '2026-03-25 00:39:47', '2026-03-25 00:39:47', 0, NULL, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (13, 'admin13@test.com', '$2a$10$X8mR0fN/Qd/fJ01s40QOPO/8H1/9X.w5N8E/7x4XyE/wR1m6E/O2e', 'Admin 13', NULL, NULL, NULL, 3, 1, NULL, NULL, '2026-03-25 00:39:47', '2026-03-25 00:39:47', 0, NULL, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (14, 'test_sponsor@test.com', '$2a$10$oOD9EQQKX4RUsPWFbBxUC.VTq7Xzxqp/rK/gi1xGA6ra6PfS3q5QS', NULL, NULL, NULL, 'test_sponsor@test.com', 2, 1, NULL, NULL, '2026-03-25 01:40:16', '2026-03-25 01:40:43', 0, NULL, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (21, 'sponsor21@test.com', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '发起人21', 'https://example.com/avatar21.jpg', '13800000021', 'sponsor21@test.com', 2, 1, NULL, NULL, '2026-03-25 00:00:00', '2026-03-25 00:00:00', 0, NULL, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (22, 'supporter22@test.com', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '支持者22', 'https://example.com/avatar22.jpg', '13800000022', 'supporter22@test.com', 1, 1, NULL, NULL, '2026-03-25 00:00:00', '2026-03-25 00:00:00', 0, NULL, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (39, 'admin39', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '超级管理员', NULL, '13800000039', NULL, 3, 1, NULL, NULL, '2026-03-26 15:08:42', '2026-03-26 15:08:42', 0, NULL, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (40, 'sponsor40', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '明星发起人', NULL, '13800000040', NULL, 2, 1, NULL, NULL, '2026-03-26 15:08:42', '2026-03-26 15:08:42', 0, NULL, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (41, 'user41', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '热情支持者', NULL, '13800000041', NULL, 1, 1, NULL, NULL, '2026-03-26 15:08:42', '2026-03-26 15:08:42', 0, NULL, NULL, NULL, NULL, NULL, 0);
+INSERT INTO `sys_user` (`id`, `account`, `password`, `nickname`, `avatar`, `phone`, `email`, `role`, `status`, `disable_reason`, `bio`, `created_at`, `updated_at`, `deleted`, `education`, `birthday`, `company`, `profession`, `location`, `gender`) VALUES (42, 'baduser42', '$2a$10$QQLCe751k6pvUwkNXHACxelYan2J3Y5cGM4BOuZlB85foy.G0Mq.y', '违规用户', NULL, '13800000042', NULL, 1, 0, NULL, NULL, '2026-03-26 15:08:42', '2026-03-26 15:08:42', 0, NULL, NULL, NULL, NULL, NULL, 0);
 COMMIT;
 
 -- ----------------------------
@@ -266,7 +420,7 @@ CREATE TABLE `sys_user_message` (
   `deleted` tinyint NOT NULL DEFAULT '0' COMMENT '逻辑删除',
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户站内信/通知消息表';
+) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户站内信/通知消息表';
 
 -- ----------------------------
 -- Records of sys_user_message
@@ -274,6 +428,48 @@ CREATE TABLE `sys_user_message` (
 BEGIN;
 INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (21, 22, 1, '平台公告: 平台春季筹款活动开启', '欢迎大家参与春季筹款活动！', 21, 0, '2026-03-25 00:00:00', '2026-03-25 00:00:00', 0);
 INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (22, 22, 2, '项目动态: 研发取得新进展', '我们的传感器模块已经完成测试，效果良好。', 21, 0, '2026-03-25 12:00:00', '2026-03-25 12:00:00', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (23, 1, 1, '新系统公告: 1', '1', 22, 1, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (24, 2, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (25, 3, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (26, 4, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (27, 11, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (28, 12, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (29, 13, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (30, 14, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (31, 21, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (32, 22, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (33, 39, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (34, 40, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (35, 41, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (36, 42, 1, '新系统公告: 1', '1', 22, 0, '2026-03-26 17:58:29', '2026-03-26 17:58:29', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (37, 1, 1, '新系统公告: 1', '1', 23, 1, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (38, 2, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (39, 3, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (40, 4, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (41, 11, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (42, 12, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (43, 13, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (44, 14, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (45, 21, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (46, 22, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (47, 39, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (48, 40, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (49, 41, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (50, 42, 1, '新系统公告: 1', '1', 23, 0, '2026-03-26 17:58:35', '2026-03-26 17:58:35', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (51, 1, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (52, 2, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (53, 3, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (54, 4, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (55, 11, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (56, 12, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (57, 13, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (58, 14, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (59, 21, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (60, 22, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (61, 39, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (62, 40, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (63, 41, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
+INSERT INTO `sys_user_message` (`id`, `user_id`, `type`, `title`, `content`, `related_id`, `is_read`, `created_at`, `updated_at`, `deleted`) VALUES (64, 42, 1, '新系统公告: 1', '<p>欢迎大家参与春季筹款活动！</p>', 24, 0, '2026-03-26 18:03:32', '2026-03-26 18:03:32', 0);
 COMMIT;
 
 -- ----------------------------

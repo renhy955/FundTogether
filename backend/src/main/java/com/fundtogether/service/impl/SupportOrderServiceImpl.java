@@ -85,7 +85,14 @@ public class SupportOrderServiceImpl extends ServiceImpl<SupportOrderMapper, Sup
         wrapper.eq(SupportOrder::getUserId, userId);
         wrapper.orderByDesc(SupportOrder::getCreatedAt);
 
-        return this.page(page, wrapper);
+        IPage<SupportOrder> result = this.page(page, wrapper);
+        for (SupportOrder order : result.getRecords()) {
+            Project project = projectService.getById(order.getProjectId());
+            if (project != null) {
+                order.setProjectName(project.getTitle());
+            }
+        }
+        return result;
     }
 
     @Override

@@ -24,6 +24,26 @@
               <span class="value">{{ project.supporterCount }} 人</span>
             </div>
           </div>
+          
+          <div class="time-info">
+            <el-icon><Calendar /></el-icon>
+            <span v-if="project.status === 0">筹款未开始 (待审核)</span>
+            <span v-else-if="project.status === 1">
+              剩余时间：<span class="highlight-time">{{ calculateRemainingDays(project.endTime) }}</span> 天 
+              <span class="time-range">({{ formatDate(project.startTime) }} 至 {{ formatDate(project.endTime) }})</span>
+            </span>
+            <span v-else>筹款已结束 <span class="time-range">({{ formatDate(project.startTime) }} 至 {{ formatDate(project.endTime) }})</span></span>
+          </div>
+
+          <div class="status-banner" v-if="project.status === 1 && project.currentAmount >= project.targetAmount">
+            <el-alert title="筹款已达标" type="success" description="该项目已成功达到目标金额，您可以继续支持以获取回报。" show-icon :closable="false" />
+          </div>
+          <div class="status-banner" v-if="project.status === 5">
+            <el-alert title="筹款成功" type="success" description="该项目已成功结束筹款。" show-icon :closable="false" />
+          </div>
+          <div class="status-banner" v-if="project.status === 6">
+            <el-alert title="筹款失败" type="error" description="该项目未在规定时间内达到目标金额，筹款失败。" show-icon :closable="false" />
+          </div>
 
           <div class="progress-section">
             <el-progress 
@@ -211,7 +231,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request from '../utils/request'
 import { ElMessage } from 'element-plus'
-import { Star, ChatDotRound } from '@element-plus/icons-vue'
+import { Star, ChatDotRound, Calendar } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
 import * as echarts from 'echarts'
 
@@ -451,6 +471,20 @@ const handleSupportClick = () => {
     return
   }
   showSupportDialog.value = true
+}
+
+const calculateRemainingDays = (endTime: string) => {
+  if (!endTime) return 0
+  const end = new Date(endTime).getTime()
+  const now = new Date().getTime()
+  const diff = end - now
+  return diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0
+}
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 const fetchProjectDetail = async () => {
@@ -723,6 +757,35 @@ onMounted(() => {
   border-radius: var(--radius-lg);
   margin-bottom: 32px;
   border: 1px solid var(--border-color);
+}
+
+.time-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #f4f4f5;
+  border-radius: 6px;
+  color: #606266;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.highlight-time {
+  color: #f56c6c;
+  font-weight: bold;
+  font-size: 18px;
+  margin: 0 4px;
+}
+
+.time-range {
+  color: #909399;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.status-banner {
+  margin-bottom: 20px;
 }
 
 .stat-row {

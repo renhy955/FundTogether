@@ -40,4 +40,10 @@ public class SupportOrder {
     
     @TableLogic
     private Integer deleted;
+    
+    @TableField(exist = false)
+    private String projectName;
+    
+    @TableField(exist = false)
+    private String userName;
 }

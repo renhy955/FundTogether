@@ -31,6 +31,16 @@ import java.util.Map;
 @RequestMapping("/api/admin")
 public class AdminController {
 
+    @PutMapping("/projects/takedown/{id}")
+    public Result<?> takedownProject(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String reason = body.get("reason");
+        if (reason == null || reason.trim().isEmpty()) {
+            return Result.error("下架原因不能为空");
+        }
+        projectService.takedownProject(id, reason);
+        return Result.success("项目已下架");
+    }
+
     @Autowired
     private SysUserService sysUserService;
     
@@ -150,6 +160,17 @@ public class AdminController {
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Project> wrapper = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
         wrapper.orderByDesc(Project::getCreatedAt);
         IPage<Project> projectPage = projectService.page(page, wrapper);
+        
+        // 补充项目发起人名称
+        for (Project project : projectPage.getRecords()) {
+            if (project.getSponsorId() != null) {
+                com.fundtogether.entity.SysUser sponsor = sysUserService.getById(project.getSponsorId());
+                if (sponsor != null) {
+                    project.setSponsorName(sponsor.getNickname() != null ? sponsor.getNickname() : "发起人_" + sponsor.getId());
+                }
+            }
+        }
+        
         return Result.success(projectPage);
     }
 
@@ -169,14 +190,18 @@ public class AdminController {
         return Result.success("项目已驳回");
     }
 
-    @PutMapping("/projects/takedown/{id}")
-    public Result<?> takedownProject(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        String reason = body.get("reason");
-        if (reason == null || reason.trim().isEmpty()) {
-            return Result.error("下架原因不能为空");
-        }
-        projectService.takedownProject(id, reason);
-        return Result.success("项目已下架");
+    @Autowired
+    private com.fundtogether.service.SupportOrderService supportOrderService;
+
+    @GetMapping("/projects/{id}/supporters")
+    public Result<?> getProjectSupporters(@PathVariable Long id) {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.fundtogether.entity.SupportOrder> wrapper = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        wrapper.eq(com.fundtogether.entity.SupportOrder::getProjectId, id)
+               .eq(com.fundtogether.entity.SupportOrder::getStatus, 1) // 已支付
+               .orderByDesc(com.fundtogether.entity.SupportOrder::getPayTime);
+        
+        java.util.List<com.fundtogether.entity.SupportOrder> orders = supportOrderService.list(wrapper);
+        return Result.success(orders);
     }
 
     @PutMapping("/user/status/{id}")

@@ -45,6 +45,10 @@
                     <span class="stat-value">{{ item.supporterCount }}</span>
                     <span class="stat-label">支持人数</span>
                   </div>
+                  <div class="stat-item">
+                    <span class="stat-value">{{ calculateRemainingDays(item.endTime) }}</span>
+                    <span class="stat-label">剩余天数</span>
+                  </div>
                 </div>
               </div>
             </el-card>
@@ -90,7 +94,12 @@
               @click="goToDetail(item.id)"
               shadow="hover"
             >
-              <img :src="item.coverImage" class="project-image" />
+              <div class="image-wrapper">
+                <img :src="item.coverImage" class="project-image" />
+                <div class="status-badge" v-if="item.status === 5 || (item.status === 1 && item.currentAmount >= item.targetAmount)">
+                  筹款成功
+                </div>
+              </div>
               <div class="project-info">
                 <h3 class="project-title">{{ item.title }}</h3>
                 <p class="project-desc">{{ item.summary }}</p>
@@ -111,6 +120,10 @@
                   <div class="stat-item">
                     <span class="stat-value">{{ item.supporterCount }}</span>
                     <span class="stat-label">支持人数</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-value">{{ calculateRemainingDays(item.endTime) }}</span>
+                    <span class="stat-label">剩余天数</span>
                   </div>
                 </div>
               </div>
@@ -150,6 +163,12 @@
                 @click="goToDetail(item.id)"
               >
                 <div class="rank-badge" :class="`rank-${index + 1}`">{{ index + 1 }}</div>
+                <div class="image-wrapper-small">
+                  <img :src="item.coverImage" class="item-image" />
+                  <div class="status-badge-small" v-if="item.status === 5 || (item.status === 1 && item.currentAmount >= item.targetAmount)">
+                    成功
+                  </div>
+                </div>
                 <div class="lb-info">
                   <div class="lb-title">{{ item.title }}</div>
                   <div class="lb-stats">
@@ -181,6 +200,14 @@ const customColors = [
   { color: '#1989fa', percentage: 80 },
   { color: '#6f7ad3', percentage: 100 },
 ]
+
+const calculateRemainingDays = (endTime: string) => {
+  if (!endTime) return 0
+  const end = new Date(endTime).getTime()
+  const now = new Date().getTime()
+  const diff = end - now
+  return diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0
+}
 
 const projects = ref<any[]>([])
 const loading = ref(false)
@@ -432,6 +459,26 @@ onMounted(() => {
   height: 220px;
   object-fit: cover;
   border-bottom: 1px solid var(--border-light);
+  transition: transform 0.3s ease;
+}
+
+.image-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+.status-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #67c23a;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 10;
 }
 
 .project-info {
@@ -557,6 +604,34 @@ onMounted(() => {
 .rank-1 { background-color: var(--color-warning); color: white; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
 .rank-2 { background-color: #94A3B8; color: white; }
 .rank-3 { background-color: #B45309; color: white; }
+
+.image-wrapper-small {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  margin-right: 15px;
+  flex-shrink: 0;
+}
+
+.item-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.status-badge-small {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background-color: #67c23a;
+  color: white;
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: bold;
+  z-index: 10;
+}
 
 .lb-info {
   flex: 1;

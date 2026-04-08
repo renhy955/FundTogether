@@ -5,10 +5,14 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fundtogether.common.Result;
 import com.fundtogether.entity.FundingLedger;
+import com.fundtogether.entity.Project;
 import com.fundtogether.entity.ProjectPayout;
+import com.fundtogether.entity.SysUser;
 import com.fundtogether.security.LoginUser;
 import com.fundtogether.service.FundingLedgerService;
 import com.fundtogether.service.ProjectPayoutService;
+import com.fundtogether.service.ProjectService;
+import com.fundtogether.service.SysUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +30,12 @@ public class FundingController {
     
     @Autowired
     private FundingLedgerService fundingLedgerService;
+
+    @Autowired
+    private ProjectService projectService;
+
+    @Autowired
+    private SysUserService sysUserService;
 
     private LoginUser getCurrentUser() {
         return (LoginUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -48,7 +58,18 @@ public class FundingController {
         wrapper.orderByAsc(ProjectPayout::getStage);
         
         Page<ProjectPayout> page = new Page<>(current, size);
-        return Result.success(projectPayoutService.page(page, wrapper));
+        IPage<ProjectPayout> result = projectPayoutService.page(page, wrapper);
+        for (ProjectPayout payout : result.getRecords()) {
+            Project project = projectService.getById(payout.getProjectId());
+            if (project != null) {
+                payout.setProjectName(project.getTitle());
+            }
+            SysUser sponsor = sysUserService.getById(payout.getSponsorId());
+            if (sponsor != null) {
+                payout.setSponsorName(sponsor.getNickname());
+            }
+        }
+        return Result.success(result);
     }
 
     // Process a payout (Admin only)
@@ -99,6 +120,17 @@ public class FundingController {
         wrapper.orderByDesc(FundingLedger::getCreatedAt);
         
         Page<FundingLedger> page = new Page<>(current, size);
-        return Result.success(fundingLedgerService.page(page, wrapper));
+        IPage<FundingLedger> result = fundingLedgerService.page(page, wrapper);
+        for (FundingLedger ledger : result.getRecords()) {
+            Project project = projectService.getById(ledger.getProjectId());
+            if (project != null) {
+                ledger.setProjectName(project.getTitle());
+            }
+            SysUser u = sysUserService.getById(ledger.getUserId());
+            if (u != null) {
+                ledger.setUserName(u.getNickname());
+            }
+        }
+        return Result.success(result);
     }
 }

@@ -38,21 +38,51 @@
         <el-tab-pane label="全量项目" name="all">
           <el-table :data="allProjects" border style="width: 100%" v-loading="allLoading">
             <el-table-column prop="id" label="ID" width="80" />
-            <el-table-column prop="title" label="项目名称" />
-            <el-table-column prop="status" label="状态" width="100">
+            <el-table-column label="项目名称" min-width="180" show-overflow-tooltip>
               <template #default="{ row }">
-                <el-tag v-if="row.status === 0" type="info">待审核</el-tag>
-                <el-tag v-else-if="row.status === 1" type="success">筹款中</el-tag>
-                <el-tag v-else-if="row.status === 2" type="danger">已驳回</el-tag>
-                <el-tag v-else-if="row.status === 3" type="warning">已取消</el-tag>
-                <el-tag v-else-if="row.status === 4" type="danger">已下架</el-tag>
-                <el-tag v-else-if="row.status === 5" type="success">已完成</el-tag>
+                <el-link type="primary" :underline="false" @click="router.push(`/projects/${row.id}`)">
+                  <el-icon class="mr-1"><Link /></el-icon>
+                  {{ row.title }}
+                </el-link>
               </template>
             </el-table-column>
-            <el-table-column prop="currentAmount" label="已筹金额" width="120" />
-            <el-table-column label="操作" width="150" fixed="right">
+            <el-table-column label="发起人" width="120">
               <template #default="{ row }">
-                <el-button v-if="row.status === 1" type="danger" size="small" @click="openTakedownDialog(row.id)">强制下架</el-button>
+                <el-tag size="small" type="info" effect="plain">
+                  <el-icon><User /></el-icon> {{ row.sponsorName || `用户 ${row.sponsorId}` }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag v-if="row.status === 0" type="warning">待审核</el-tag>
+                <el-tag v-else-if="row.status === 1 && row.currentAmount >= row.targetAmount" type="success">已达标</el-tag>
+                <el-tag v-else-if="row.status === 1" type="primary">筹款中</el-tag>
+                <el-tag v-else-if="row.status === 2" type="danger">已驳回</el-tag>
+                <el-tag v-else-if="row.status === 3" type="info">已取消</el-tag>
+                <el-tag v-else-if="row.status === 4" type="info">已下架</el-tag>
+                <el-tag v-else-if="row.status === 5" type="success">筹款成功</el-tag>
+                <el-tag v-else-if="row.status === 6" type="danger">筹款失败</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="目标 / 已筹" width="160">
+              <template #default="{ row }">
+                <div>目标：￥{{ row.targetAmount }}</div>
+                <div style="color: #f56c6c;">已筹：￥{{ row.currentAmount }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="筹款时间" width="220">
+              <template #default="{ row }">
+                <div style="font-size: 12px; color: #606266;">
+                  起: {{ row.startTime ? row.startTime.substring(0, 10) : '-' }}<br/>
+                  止: {{ row.endTime ? row.endTime.substring(0, 10) : '-' }}
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="180" fixed="right">
+              <template #default="{ row }">
+                <el-button type="primary" size="small" @click="openSupportersDialog(row.id)">支持者</el-button>
+                <el-button v-if="row.status === 1" type="danger" size="small" @click="openTakedownDialog(row.id)">下架</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -91,15 +121,38 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 支持者列表弹窗 -->
+    <el-dialog v-model="supportersDialogVisible" title="项目支持者列表" width="800px">
+      <div class="dialog-header-actions" style="margin-bottom: 15px; text-align: right;">
+        <el-button type="primary" @click="exportSupporters" :loading="exporting">
+          导出 Excel
+        </el-button>
+      </div>
+      <el-table :data="supporters" border style="width: 100%" v-loading="loadingSupporters">
+        <el-table-column prop="userId" label="用户ID" width="100" />
+        <el-table-column label="支持金额" width="120">
+          <template #default="{ row }">
+            <span style="color: #f56c6c; font-weight: bold;">￥{{ row.amount }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="message" label="留言" show-overflow-tooltip />
+        <el-table-column prop="payTime" label="支持时间" width="180" />
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Link, User } from '@element-plus/icons-vue'
 import { getPendingProjects, approveProject, rejectProject, takedownProject } from '../../api/admin'
+import { getProjectSupporters } from '../../api/project'
 import request from '../../utils/request'
 
+const router = useRouter()
 const activeTab = ref('pending')
 
 // 待审核项目状态
@@ -123,6 +176,53 @@ const allTotal = ref(0)
 const showTakedownDialog = ref(false)
 const takedownReason = ref('')
 const currentTakedownId = ref<number | null>(null)
+
+const supportersDialogVisible = ref(false)
+const supporters = ref<any[]>([])
+const loadingSupporters = ref(false)
+const exporting = ref(false)
+
+const exportSupporters = () => {
+  if (supporters.value.length === 0) {
+    ElMessage.warning('暂无数据可导出')
+    return
+  }
+  exporting.value = true
+  const headers = ['用户ID', '支持金额', '留言', '支持时间']
+  const rows = supporters.value.map(s => [
+    s.userId, 
+    s.amount, 
+    s.message || '', 
+    s.payTime || ''
+  ])
+  
+  const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+    + headers.join(",") + "\n" 
+    + rows.map(e => e.join(",")).join("\n")
+    
+  const encodedUri = encodeURI(csvContent)
+  const link = document.createElement("a")
+  link.setAttribute("href", encodedUri)
+  link.setAttribute("download", `项目支持者列表.csv`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  exporting.value = false
+}
+
+const openSupportersDialog = async (projectId: number) => {
+  supportersDialogVisible.value = true
+  loadingSupporters.value = true
+  try {
+    const res: any = await request.get(`/admin/projects/${projectId}/supporters`)
+    supporters.value = res.data || []
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('获取支持者列表失败')
+  } finally {
+    loadingSupporters.value = false
+  }
+}
 
 const fetchPendingProjects = async () => {
   pendingLoading.value = true

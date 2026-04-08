@@ -29,7 +29,13 @@
           <el-tab-pane label="支持订单" name="orders">
             <el-table :data="orders" style="width: 100%" v-loading="loading">
               <el-table-column prop="orderNo" label="订单号" width="200" />
-              <el-table-column prop="projectId" label="项目ID" width="100" />
+              <el-table-column label="支持项目" min-width="150" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <el-link type="primary" :underline="false" @click="router.push(`/projects/${row.projectId}`)">
+                    {{ row.projectName || `项目 ${row.projectId}` }}
+                  </el-link>
+                </template>
+              </el-table-column>
               <el-table-column prop="amount" label="支持金额" width="120">
                 <template #default="{ row }">
                   <span style="color: #f56c6c; font-weight: bold;">￥{{ row.amount }}</span>
@@ -69,7 +75,13 @@
           <el-tab-pane label="资金流水" name="ledgers">
             <el-table :data="ledgers" style="width: 100%" v-loading="loadingLedgers">
               <el-table-column prop="id" label="流水号" width="100" />
-              <el-table-column prop="projectId" label="项目ID" width="100" />
+              <el-table-column label="关联项目" min-width="150" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <el-link type="primary" :underline="false" @click="router.push(`/projects/${row.projectId}`)">
+                    {{ row.projectName || `项目 ${row.projectId}` }}
+                  </el-link>
+                </template>
+              </el-table-column>
               <el-table-column label="类型" width="150">
                 <template #default="scope">
                   <el-tag v-if="scope.row.type === 1" type="success">支持支付</el-tag>
@@ -135,11 +147,11 @@ const ledgerTotal = ref(0)
 const fetchLedgers = async () => {
   loadingLedgers.value = true
   try {
-    const res = await request.get('/api/funding/ledgers', {
+    const res = await request.get('/funding/ledgers', {
       params: { current: ledgerPage.value, size: ledgerSize.value }
     })
-    ledgers.value = res.data.data.records
-    ledgerTotal.value = res.data.data.total
+    ledgers.value = res.data.records
+    ledgerTotal.value = res.data.total
   } catch (error) {
     ElMessage.error('获取资金流水失败')
   } finally {

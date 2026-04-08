@@ -14,12 +14,19 @@
               <img :src="row.coverImage" style="width: 80px; height: 60px; object-fit: cover;" />
             </template>
           </el-table-column>
-          <el-table-column prop="title" label="标题" show-overflow-tooltip />
+          <el-table-column label="标题" show-overflow-tooltip>
+            <template #default="{ row }">
+              <el-link type="primary" :underline="false" @click="router.push(`/projects/${row.id}`)">
+                <el-icon class="mr-1"><Link /></el-icon>
+                {{ row.title }}
+              </el-link>
+            </template>
+          </el-table-column>
           <el-table-column prop="targetAmount" label="目标金额" width="120" />
           <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="getStatusTagType(row.status)">
-                {{ getStatusName(row.status) }}
+              <el-tag :type="getStatusTagType(row)">
+                {{ getStatusName(row) }}
               </el-tag>
             </template>
           </el-table-column>
@@ -253,9 +260,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { ArrowDown } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { ArrowDown, Link } from '@element-plus/icons-vue'
 import request from '../utils/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
+
+const router = useRouter()
 
 const handleCommand = (cmd: Function) => {
   if (typeof cmd === 'function') {
@@ -395,10 +405,10 @@ const openPayoutsDialog = async (projectId: number) => {
   payoutsDialogVisible.value = true
   payoutsLoading.value = true
   try {
-    const res = await request.get('/api/funding/payouts', {
+    const res = await request.get('/funding/payouts', {
       params: { projectId, current: 1, size: 100 }
     })
-    payouts.value = res.data.data.records
+    payouts.value = res.data.records
   } catch (error) {
     ElMessage.error('获取拨付详情失败')
   } finally {
@@ -452,18 +462,24 @@ const rules = reactive<FormRules>({
   content: [{ required: true, message: '请输入项目详情', trigger: 'blur' }]
 })
 
-const getStatusName = (status: number) => {
-  const map: Record<number, string> = {
-    0: '待审核', 1: '筹款中', 2: '已驳回', 3: '已取消', 4: '已下架', 5: '已完成'
+const getStatusName = (row: any) => {
+  if (row.status === 1 && row.currentAmount >= row.targetAmount) {
+    return '已达标'
   }
-  return map[status] || '未知'
+  const map: Record<number, string> = {
+    0: '待审核', 1: '筹款中', 2: '已驳回', 3: '已取消', 4: '已下架', 5: '筹款成功', 6: '筹款失败'
+  }
+  return map[row.status] || '未知'
 }
 
-const getStatusTagType = (status: number) => {
-  const map: Record<number, string> = {
-    0: 'warning', 1: 'success', 2: 'danger', 3: 'info', 4: 'info', 5: 'success'
+const getStatusTagType = (row: any) => {
+  if (row.status === 1 && row.currentAmount >= row.targetAmount) {
+    return 'success'
   }
-  return map[status] || ''
+  const map: Record<number, string> = {
+    0: 'warning', 1: 'primary', 2: 'danger', 3: 'info', 4: 'info', 5: 'success', 6: 'danger'
+  }
+  return map[row.status] || ''
 }
 
 const fetchProjects = async () => {

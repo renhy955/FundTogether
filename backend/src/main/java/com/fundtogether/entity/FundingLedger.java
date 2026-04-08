@@ -23,4 +23,10 @@ public class FundingLedger {
     private LocalDateTime updatedAt;
     @TableLogic
     private Integer deleted;
+    
+    @TableField(exist = false)
+    private String projectName;
+    
+    @TableField(exist = false)
+    private String userName;
 }

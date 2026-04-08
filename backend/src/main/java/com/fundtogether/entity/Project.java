@@ -47,6 +47,9 @@ public class Project {
     
     private Integer heat; // 热度
     
+    @TableField(exist = false)
+    private String sponsorName;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     

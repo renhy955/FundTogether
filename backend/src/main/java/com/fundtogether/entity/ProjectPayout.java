@@ -24,4 +24,10 @@ public class ProjectPayout {
     private LocalDateTime updatedAt;
     @TableLogic
     private Integer deleted;
+    
+    @TableField(exist = false)
+    private String projectName;
+    
+    @TableField(exist = false)
+    private String sponsorName;
 }

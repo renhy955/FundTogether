@@ -6,8 +6,21 @@
       <!-- 阶段拨付管理 -->
       <el-tab-pane label="阶段拨付管理" name="payouts">
         <el-table :data="payouts" style="width: 100%" v-loading="loadingPayouts">
-          <el-table-column prop="projectId" label="项目ID" width="100" />
-          <el-table-column prop="sponsorId" label="发起人ID" width="100" />
+          <el-table-column label="关联项目" min-width="150" show-overflow-tooltip>
+            <template #default="{ row }">
+              <el-link type="primary" :underline="false" @click="router.push(`/projects/${row.projectId}`)">
+                {{ row.projectName || `项目 ${row.projectId}` }}
+              </el-link>
+            </template>
+          </el-table-column>
+          <el-table-column label="发起人" width="120">
+            <template #default="{ row }">
+              <el-tag size="small" type="info" effect="plain">
+                <el-icon><User /></el-icon>
+                {{ row.sponsorName || `用户 ${row.sponsorId}` }}
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="拨付阶段" width="120">
             <template #default="scope">
               第 {{ scope.row.stage }} 期
@@ -54,8 +67,21 @@
       <el-tab-pane label="资金流水大盘" name="ledgers">
         <el-table :data="ledgers" style="width: 100%" v-loading="loadingLedgers">
           <el-table-column prop="id" label="流水号" width="100" />
-          <el-table-column prop="projectId" label="项目ID" width="100" />
-          <el-table-column prop="userId" label="关联用户ID" width="120" />
+          <el-table-column label="关联项目" min-width="150" show-overflow-tooltip>
+            <template #default="{ row }">
+              <el-link type="primary" :underline="false" @click="router.push(`/projects/${row.projectId}`)">
+                {{ row.projectName || `项目 ${row.projectId}` }}
+              </el-link>
+            </template>
+          </el-table-column>
+          <el-table-column label="关联用户" width="120">
+            <template #default="{ row }">
+              <el-tag size="small" type="info" effect="plain">
+                <el-icon><User /></el-icon>
+                {{ row.userName || `用户 ${row.userId}` }}
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="类型" width="150">
             <template #default="scope">
               <el-tag v-if="scope.row.type === 1" type="success">用户支付</el-tag>
@@ -93,7 +119,10 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '../../utils/request'
+import { useRouter } from 'vue-router'
+import { User } from '@element-plus/icons-vue'
 
+const router = useRouter()
 const activeTab = ref('payouts')
 
 // Payouts state
@@ -113,11 +142,11 @@ const ledgerTotal = ref(0)
 const fetchPayouts = async () => {
   loadingPayouts.value = true
   try {
-    const res = await request.get('/api/funding/payouts', {
+    const res = await request.get('/funding/payouts', {
       params: { current: payoutPage.value, size: payoutSize.value }
     })
-    payouts.value = res.data.data.records
-    payoutTotal.value = res.data.data.total
+    payouts.value = res.data.records
+    payoutTotal.value = res.data.total
   } catch (error) {
     ElMessage.error('获取拨付记录失败')
   } finally {
@@ -128,11 +157,11 @@ const fetchPayouts = async () => {
 const fetchLedgers = async () => {
   loadingLedgers.value = true
   try {
-    const res = await request.get('/api/funding/ledgers', {
+    const res = await request.get('/funding/ledgers', {
       params: { current: ledgerPage.value, size: ledgerSize.value }
     })
-    ledgers.value = res.data.data.records
-    ledgerTotal.value = res.data.data.total
+    ledgers.value = res.data.records
+    ledgerTotal.value = res.data.total
   } catch (error) {
     ElMessage.error('获取资金流水失败')
   } finally {
@@ -147,7 +176,7 @@ const handleProcessPayout = (row: any) => {
     type: 'warning'
   }).then(async () => {
     try {
-      await request.post(`/api/funding/process-payout/${row.id}`)
+      await request.post(`/funding/process-payout/${row.id}`)
       ElMessage.success('拨付成功')
       fetchPayouts()
       fetchLedgers()

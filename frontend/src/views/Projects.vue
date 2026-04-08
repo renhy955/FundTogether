@@ -66,7 +66,12 @@
               @click="goToDetail(item.id)"
               shadow="hover"
             >
-              <img :src="item.coverImage" class="project-image" />
+              <div class="image-wrapper">
+                <img :src="item.coverImage" class="project-image" />
+                <div class="status-badge" v-if="item.status === 5 || (item.status === 1 && item.currentAmount >= item.targetAmount)">
+                  筹款成功
+                </div>
+              </div>
               <div class="project-info">
                 <h3 class="project-title">{{ item.title }}</h3>
                 <p class="project-desc">{{ item.summary }}</p>
@@ -87,6 +92,10 @@
                   <div class="stat-item">
                     <span class="stat-value">{{ item.supporterCount }}</span>
                     <span class="stat-label">支持人数</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-value">{{ calculateRemainingDays(item.endTime) }}</span>
+                    <span class="stat-label">剩余天数</span>
                   </div>
                 </div>
               </div>
@@ -125,6 +134,14 @@ const customColors = [
   { color: '#1989fa', percentage: 80 },
   { color: '#6f7ad3', percentage: 100 },
 ]
+
+const calculateRemainingDays = (endTime: string) => {
+  if (!endTime) return 0
+  const end = new Date(endTime).getTime()
+  const now = new Date().getTime()
+  const diff = end - now
+  return diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0
+}
 
 const projects = ref<any[]>([])
 const loading = ref(false)
@@ -270,6 +287,25 @@ onMounted(() => {
   height: 240px;
   object-fit: cover;
   border-bottom: 1px solid var(--border-light);
+}
+
+.image-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+.status-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #67c23a;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 10;
 }
 
 .project-info {
