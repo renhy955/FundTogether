@@ -20,6 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/funding")
@@ -100,6 +105,14 @@ public class FundingController {
         ledger.setRemark(payout.getConditionDesc());
         fundingLedgerService.save(ledger);
         
+        // Add funds to project sponsor's account balance
+        SysUser sponsor = sysUserService.getById(payout.getSponsorId());
+        if (sponsor != null) {
+            BigDecimal currentBalance = sponsor.getBalance() != null ? sponsor.getBalance() : BigDecimal.ZERO;
+            sponsor.setBalance(currentBalance.add(payout.getAmount()));
+            sysUserService.updateById(sponsor);
+        }
+        
         return Result.success("拨付成功");
     }
 
@@ -132,5 +145,35 @@ public class FundingController {
             }
         }
         return Result.success(result);
+    }
+
+    // Get Platform Account Overview
+    @GetMapping("/platform-account")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public Result<?> getPlatformAccount() {
+        // compute incoming (type=1, status=1)
+        LambdaQueryWrapper<FundingLedger> inWrapper = new LambdaQueryWrapper<>();
+        inWrapper.eq(FundingLedger::getType, 1).eq(FundingLedger::getStatus, 1);
+        List<FundingLedger> inList = fundingLedgerService.list(inWrapper);
+        BigDecimal totalIncoming = inList.stream()
+            .map(FundingLedger::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // compute outgoing (type=2 or type=3, status=1)
+        LambdaQueryWrapper<FundingLedger> outWrapper = new LambdaQueryWrapper<>();
+        outWrapper.in(FundingLedger::getType, Arrays.asList(2, 3)).eq(FundingLedger::getStatus, 1);
+        List<FundingLedger> outList = fundingLedgerService.list(outWrapper);
+        BigDecimal totalOutgoing = outList.stream()
+            .map(FundingLedger::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal balance = totalIncoming.subtract(totalOutgoing);
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("totalIncoming", totalIncoming);
+        res.put("totalOutgoing", totalOutgoing);
+        res.put("balance", balance);
+
+        return Result.success(res);
     }
 }

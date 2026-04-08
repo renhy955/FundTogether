@@ -4,6 +4,27 @@
       <h2>平台财务</h2>
     </div>
     
+    <el-row :gutter="20" class="platform-stats">
+      <el-col :span="8">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-title">平台账户余额 (待下发)</div>
+          <div class="stat-value balance">¥ {{ platformStats.balance.toFixed(2) }}</div>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-title">累计汇入资金 (用户支持)</div>
+          <div class="stat-value incoming">¥ {{ platformStats.totalIncoming.toFixed(2) }}</div>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-title">累计拨付资金 (项目阶段)</div>
+          <div class="stat-value outgoing">¥ {{ platformStats.totalOutgoing.toFixed(2) }}</div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <el-tabs v-model="activeTab">
       <!-- 阶段拨付管理 -->
       <el-tab-pane label="阶段拨付管理" name="payouts">
@@ -65,35 +86,41 @@
         </div>
       </el-tab-pane>
 
-      <!-- 资金流水大盘 -->
-      <el-tab-pane label="资金流水大盘" name="ledgers">
+      <!-- 平台账户余额流水明细 -->
+      <el-tab-pane label="平台账户余额流水明细" name="ledgers">
         <el-table :data="ledgers" style="width: 100%" v-loading="loadingLedgers">
           <el-table-column prop="id" label="流水号" width="100" />
-          <el-table-column label="关联项目" min-width="150" show-overflow-tooltip>
+          <el-table-column label="业务场景" min-width="250" show-overflow-tooltip>
             <template #default="{ row }">
-              <el-link type="primary" :underline="false" @click="router.push(`/projects/${row.projectId}`)">
-                {{ row.projectName || `项目 ${row.projectId}` }}
-              </el-link>
+              <span v-if="row.type === 1">
+                用户 <el-tag size="small" type="info">{{ row.userName || `用户 ${row.userId}` }}</el-tag> 投资 
+                <el-link type="primary" :underline="false" @click="router.push(`/projects/${row.projectId}`)">
+                  {{ row.projectName || `项目 ${row.projectId}` }}
+                </el-link> 
+                到 平台账户
+              </span>
+              <span v-else-if="row.type === 2">
+                平台账户 退款给 用户 <el-tag size="small" type="info">{{ row.userName || `用户 ${row.userId}` }}</el-tag>
+                (关联: <el-link type="primary" :underline="false" @click="router.push(`/projects/${row.projectId}`)">{{ row.projectName || `项目 ${row.projectId}` }}</el-link>)
+              </span>
+              <span v-else-if="row.type === 3">
+                平台账户 拨款给 项目发起人 <el-tag size="small" type="info">{{ row.userName || `用户 ${row.userId}` }}</el-tag>
+                (关联: <el-link type="primary" :underline="false" @click="router.push(`/projects/${row.projectId}`)">{{ row.projectName || `项目 ${row.projectId}` }}</el-link>)
+              </span>
             </template>
           </el-table-column>
-          <el-table-column label="关联用户" width="120">
-            <template #default="{ row }">
-              <el-tag size="small" type="info" effect="plain">
-                <el-icon><User /></el-icon>
-                {{ row.userName || `用户 ${row.userId}` }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="类型" width="150">
+          <el-table-column label="资金流向" width="150">
             <template #default="scope">
-              <el-tag v-if="scope.row.type === 1" type="success">用户支付</el-tag>
-              <el-tag v-else-if="scope.row.type === 2" type="danger">平台退款</el-tag>
-              <el-tag v-else-if="scope.row.type === 3" type="warning">阶段拨付</el-tag>
+              <el-tag v-if="scope.row.type === 1" type="success" effect="dark">收入 (转入平台)</el-tag>
+              <el-tag v-else-if="scope.row.type === 2" type="danger" effect="dark">支出 (平台退款)</el-tag>
+              <el-tag v-else-if="scope.row.type === 3" type="warning" effect="dark">支出 (平台拨款)</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="金额" width="120">
+          <el-table-column label="变动金额" width="120">
             <template #default="scope">
-              ¥ {{ scope.row.amount }}
+              <span :style="{ color: scope.row.type === 1 ? '#67C23A' : '#F56C6C', fontWeight: 'bold' }">
+                {{ scope.row.type === 1 ? '+' : '-' }} ¥ {{ scope.row.amount }}
+              </span>
             </template>
           </el-table-column>
           <el-table-column prop="remark" label="备注说明" />
@@ -126,6 +153,12 @@ import { User } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const activeTab = ref('payouts')
+
+const platformStats = ref({
+  balance: 0,
+  totalIncoming: 0,
+  totalOutgoing: 0
+})
 
 // Payouts state
 const payouts = ref<any[]>([])
@@ -171,6 +204,19 @@ const fetchLedgers = async () => {
   }
 }
 
+const fetchPlatformStats = async () => {
+  try {
+    const res = await request.get('/funding/platform-account')
+    platformStats.value = {
+      balance: Number(res.data.balance || 0),
+      totalIncoming: Number(res.data.totalIncoming || 0),
+      totalOutgoing: Number(res.data.totalOutgoing || 0)
+    }
+  } catch (error) {
+    ElMessage.error('获取平台账户信息失败')
+  }
+}
+
 const handleProcessPayout = (row: any) => {
   ElMessageBox.confirm(`确认向发起人拨付 第 ${row.stage} 期资金 ￥${row.amount} 吗？`, '拨付确认', {
     confirmButtonText: '确认拨付',
@@ -182,6 +228,7 @@ const handleProcessPayout = (row: any) => {
       ElMessage.success('拨付成功')
       fetchPayouts()
       fetchLedgers()
+      fetchPlatformStats()
     } catch (error: any) {
       ElMessage.error(error.response?.data?.msg || '拨付失败')
     }
@@ -189,6 +236,7 @@ const handleProcessPayout = (row: any) => {
 }
 
 onMounted(() => {
+  fetchPlatformStats()
   fetchPayouts()
   fetchLedgers()
 })
@@ -199,6 +247,31 @@ onMounted(() => {
   background: white;
   padding: 24px;
   border-radius: 8px;
+}
+.platform-stats {
+  margin-bottom: 24px;
+}
+.stat-card {
+  text-align: center;
+  border-radius: 8px;
+}
+.stat-title {
+  color: #909399;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.stat-value {
+  font-size: 28px;
+  font-weight: bold;
+}
+.stat-value.balance {
+  color: #409EFF;
+}
+.stat-value.incoming {
+  color: #67C23A;
+}
+.stat-value.outgoing {
+  color: #E6A23C;
 }
 .pagination-container {
   margin-top: 20px;

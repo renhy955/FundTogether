@@ -13,7 +13,14 @@
           <el-table-column prop="minAmount" label="最小金额" min-width="120" />
           <el-table-column prop="maxAmount" label="最大金额" min-width="120" />
           <el-table-column prop="description" label="描述" min-width="150" />
-          <el-table-column prop="icon" label="图标" min-width="120" />
+          <el-table-column prop="icon" label="颜色" min-width="120">
+            <template #default="{ row }">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div :style="{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: row.icon || '#909399' }"></div>
+                <span>{{ row.icon }}</span>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="160" fixed="right">
             <template #default="{ row }">
               <el-button 
@@ -66,8 +73,9 @@
         <el-form-item label="描述" prop="description">
           <el-input v-model="form.description" type="textarea" placeholder="请输入描述" />
         </el-form-item>
-        <el-form-item label="图标" prop="icon">
-          <el-input v-model="form.icon" placeholder="请输入图标 URL 或 class" />
+        <el-form-item label="颜色" prop="icon">
+          <el-color-picker v-model="form.icon" show-alpha :predefine="['#ff4500', '#ff8c00', '#ffd700', '#90ee90', '#00ced1', '#1e90ff', '#c71585', '#cd7f32', '#c0c0c0', '#ffd700', '#e5e4e2']" />
+          <span style="margin-left: 10px; color: var(--text-secondary); font-size: 12px;">用于用户个人主页的等级标签颜色</span>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -101,7 +109,7 @@ const form = ref({
   minAmount: 0,
   maxAmount: 0,
   description: '',
-  icon: ''
+  icon: '#cd7f32'
 })
 
 const rules = {
@@ -140,7 +148,7 @@ const openDialog = (row?: any) => {
         minAmount: 0,
         maxAmount: 0,
         description: '',
-        icon: ''
+        icon: '#cd7f32'
       }
     }
   })

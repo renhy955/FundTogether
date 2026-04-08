@@ -4,6 +4,7 @@
       <!-- 左侧个人信息概览 -->
       <aside class="sidebar">
         <el-card class="profile-sidebar" shadow="hover">
+          <div class="sidebar-header-bg"></div>
           <div class="user-info-overview">
             <el-upload
               class="avatar-uploader"
@@ -43,9 +44,9 @@
               <el-icon><Postcard /></el-icon>
               <span>实名认证</span>
             </el-menu-item>
-            <el-menu-item index="payment">
+            <el-menu-item index="account">
               <el-icon><Wallet /></el-icon>
-              <span>支付方式</span>
+              <span>我的账户</span>
             </el-menu-item>
             <el-menu-item index="password">
               <el-icon><Lock /></el-icon>
@@ -203,48 +204,50 @@
             </el-form>
           </div>
 
-          <!-- 支付方式 -->
-          <div v-show="activeTab === 'payment'" class="tab-content fade-in">
-            <div class="action-bar">
-              <el-button type="primary" @click="showPaymentDialog = true" icon="Plus">绑定新账号</el-button>
-            </div>
-            
-            <div class="payment-list">
-              <el-empty v-if="paymentMethods.length === 0" description="暂无绑定的支付方式" />
-              <el-row :gutter="20" v-else>
-                <el-col :xs="24" :sm="12" :md="12" v-for="item in paymentMethods" :key="item.id" style="margin-bottom: 20px;">
-                  <div class="payment-card" :class="getPaymentClass(item.type)">
-                    <div class="payment-header">
-                      <div class="payment-type">
-                        <el-icon v-if="item.type === 1"><ChatDotRound /></el-icon>
-                        <el-icon v-else-if="item.type === 2"><Wallet /></el-icon>
-                        <el-icon v-else-if="item.type === 3"><CreditCard /></el-icon>
-                        <span>{{ getPaymentName(item.type) }}</span>
-                      </div>
-                      <span class="payment-name">{{ item.name }}</span>
-                    </div>
-                    <div class="payment-body">
-                      <div class="payment-account">{{ formatAccount(item.account) }}</div>
-                      <div class="payment-bank" v-if="item.type === 3">{{ item.bankName }}</div>
-                    </div>
-                  </div>
-                </el-col>
-              </el-row>
+          <!-- 我的账户 -->
+          <div v-show="activeTab === 'account'" class="tab-content fade-in">
+            <div class="account-card modern-stat-card">
+              <div class="stat-card-bg-decoration"></div>
+              <div class="stat-content">
+                <div class="balance-label">
+                  <el-icon><Wallet /></el-icon>
+                  <span>可用余额</span>
+                </div>
+                <div class="balance-amount">
+                  <span class="currency">¥</span>
+                  <span class="amount">{{ balance.toFixed(2) }}</span>
+                </div>
+              </div>
+              <div class="stat-actions">
+                <el-button size="large" @click="showRechargeDialog = true" class="recharge-btn premium-btn">
+                  <el-icon><Money /></el-icon> <span>立即充值</span>
+                </el-button>
+              </div>
             </div>
           </div>
 
           <!-- 修改密码 -->
           <div v-show="activeTab === 'password'" class="tab-content fade-in">
-            <el-form :model="passwordForm" label-position="top" class="modern-form" style="max-width: 400px;">
-              <el-form-item label="原密码" prop="oldPassword">
-                <el-input v-model="passwordForm.oldPassword" type="password" show-password size="large" placeholder="请输入当前密码" />
-              </el-form-item>
-              <el-form-item label="新密码" prop="newPassword">
-                <el-input v-model="passwordForm.newPassword" type="password" show-password size="large" placeholder="请输入新密码" />
-              </el-form-item>
-              <el-form-item label="确认新密码" prop="confirmPassword">
-                <el-input v-model="passwordForm.confirmPassword" type="password" show-password size="large" placeholder="请再次输入新密码" />
-              </el-form-item>
+            <el-form :model="passwordForm" label-position="top" class="modern-form">
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="原密码" prop="oldPassword">
+                    <el-input v-model="passwordForm.oldPassword" type="password" show-password size="large" placeholder="请输入当前密码" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="新密码" prop="newPassword">
+                    <el-input v-model="passwordForm.newPassword" type="password" show-password size="large" placeholder="请输入新密码" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="确认新密码" prop="confirmPassword">
+                    <el-input v-model="passwordForm.confirmPassword" type="password" show-password size="large" placeholder="请再次输入新密码" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
               <div class="form-actions">
                 <el-button type="primary" size="large" @click="handleUpdatePassword">确认修改</el-button>
               </div>
@@ -255,30 +258,36 @@
       </main>
     </div>
 
-    <!-- 绑定支付方式弹窗 -->
-    <el-dialog v-model="showPaymentDialog" title="绑定支付账号" width="450px" custom-class="modern-dialog">
-      <el-form :model="paymentForm" label-position="top">
-        <el-form-item label="支付平台" required>
-          <el-radio-group v-model="paymentForm.type" size="large" style="width: 100%; display: flex;">
-            <el-radio-button :label="2" style="flex: 1; text-align: center;">支付宝</el-radio-button>
-            <el-radio-button :label="3" style="flex: 1; text-align: center;">银行卡</el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="账号" required>
-          <el-input v-model="paymentForm.account" placeholder="请输入支付账号/银行卡号" size="large" />
-        </el-form-item>
-        <el-form-item label="真实姓名" required>
-          <el-input v-model="paymentForm.name" placeholder="请输入绑定的真实姓名" size="large" />
-        </el-form-item>
-        <el-form-item label="所属银行" v-if="paymentForm.type === 3" required>
-          <el-input v-model="paymentForm.bankName" placeholder="例如：招商银行" size="large" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="showPaymentDialog = false" size="large">取消</el-button>
-          <el-button type="primary" @click="handleBindPaymentMethod" size="large">确认绑定</el-button>
+    <!-- 充值弹窗 -->
+    <el-dialog v-model="showRechargeDialog" title="账户充值" width="400px" custom-class="modern-dialog">
+      <div class="recharge-dialog-content">
+        <div class="recharge-amount-input">
+          <span class="label">充值金额：</span>
+          <el-input-number 
+            v-model="rechargeAmount" 
+            :min="1" 
+            :max="100000" 
+            :precision="2" 
+            :step="100"
+            style="width: 200px"
+          >
+            <template #prefix>¥</template>
+          </el-input-number>
         </div>
+        <div class="payment-method">
+          <span class="label">支付方式：</span>
+          <div class="alipay-option">
+            <el-icon><Platform /></el-icon> 支付宝
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showRechargeDialog = false">取消</el-button>
+          <el-button type="primary" @click="handleRecharge" :loading="recharging">
+            前往支付
+          </el-button>
+        </span>
       </template>
     </el-dialog>
   </div>
@@ -287,8 +296,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Camera, User, Postcard, Wallet, Lock, ChatDotRound, CreditCard } from '@element-plus/icons-vue'
-import { updateProfile, updatePassword, bindPaymentMethod, getPaymentMethods, getUserInfo } from '../api/user'
+import { Plus, Camera, User, Postcard, Wallet, Lock, Platform, Money } from '@element-plus/icons-vue'
+import { updateProfile, updatePassword, getUserInfo } from '../api/user'
 import request from '../utils/request'
 import { useUserStore } from '../store/user'
 import { useRouter } from 'vue-router'
@@ -307,7 +316,7 @@ const userLevel = ref<any>(null)
 const tabTitles: Record<string, string> = {
   profile: '基础资料',
   auth: '实名认证',
-  payment: '支付方式管理',
+  account: '我的账户',
   password: '安全设置'
 }
 
@@ -335,14 +344,53 @@ const passwordForm = ref({
   confirmPassword: ''
 })
 
-const paymentMethods = ref<any[]>([])
-const showPaymentDialog = ref(false)
-const paymentForm = ref({
-  type: 2,
-  account: '',
-  name: '',
-  bankName: ''
-})
+const balance = ref(0)
+const showRechargeDialog = ref(false)
+const rechargeAmount = ref(100)
+const recharging = ref(false)
+
+const fetchBalance = async () => {
+  try {
+    const res: any = await request.get('/user/account')
+    if (res.code === 200) {
+      balance.value = res.data
+    } else {
+      ElMessage.error(res.message || '获取余额失败')
+    }
+  } catch (error) {
+    console.error('Fetch balance error:', error)
+    ElMessage.error('获取余额失败')
+  }
+}
+
+const handleRecharge = async () => {
+  if (!rechargeAmount.value || rechargeAmount.value <= 0) {
+    ElMessage.warning('请输入有效的充值金额')
+    return
+  }
+  
+  recharging.value = true
+  try {
+    const res: any = await request.post('/user/account/recharge', {
+      amount: rechargeAmount.value
+    })
+    
+    if (res.code === 200 && res.data) {
+      const formHtml = res.data
+      const div = document.createElement('div')
+      div.innerHTML = formHtml
+      document.body.appendChild(div)
+      document.forms[document.forms.length - 1].submit()
+    } else {
+      ElMessage.error(res.message || '发起充值失败')
+    }
+  } catch (error) {
+    console.error('Recharge error:', error)
+    ElMessage.error('发起充值失败')
+  } finally {
+    recharging.value = false
+  }
+}
 
 const authInfo = ref<any>(null)
 const authForm = ref({
@@ -431,37 +479,6 @@ const submitAuth = async () => {
   }
 }
 
-const fetchPaymentMethods = async () => {
-  try {
-    const res: any = await getPaymentMethods()
-    paymentMethods.value = res.data || []
-  } catch (error) {
-    console.error(error)
-  }
-}
-
-const getPaymentName = (type: number) => {
-  if (type === 1) return '微信支付'
-  if (type === 2) return '支付宝'
-  if (type === 3) return '银行卡'
-  return '未知'
-}
-
-const getPaymentClass = (type: number) => {
-  if (type === 1) return 'payment-wechat'
-  if (type === 2) return 'payment-alipay'
-  if (type === 3) return 'payment-bank'
-  return ''
-}
-
-const formatAccount = (account: string) => {
-  if (!account) return ''
-  if (account.length > 8) {
-    return account.substring(0, 4) + ' **** **** ' + account.substring(account.length - 4)
-  }
-  return account
-}
-
 const loadUserLevel = async () => {
   try {
     const res: any = await request.get('/user-level/current')
@@ -476,8 +493,8 @@ const loadUserLevel = async () => {
 onMounted(() => {
   loadUserInfo()
   loadUserLevel()
-  fetchPaymentMethods()
   fetchAuthInfo()
+  fetchBalance()
 })
 
 const handleUpdateProfile = async () => {
@@ -514,26 +531,6 @@ const handleUpdatePassword = async () => {
     ElMessage.error(error.message || '修改失败')
   }
 }
-
-const handleBindPaymentMethod = async () => {
-  if (!paymentForm.value.account || !paymentForm.value.name) {
-    ElMessage.warning('请填写完整的账号和姓名信息')
-    return
-  }
-  if (paymentForm.value.type === 3 && !paymentForm.value.bankName) {
-    ElMessage.warning('请填写所属银行')
-    return
-  }
-  try {
-    await bindPaymentMethod(paymentForm.value)
-    ElMessage.success('支付账号绑定成功')
-    showPaymentDialog.value = false
-    paymentForm.value = { type: 2, account: '', name: '', bankName: '' }
-    fetchPaymentMethods()
-  } catch (error: any) {
-    ElMessage.error(error.message || '绑定失败')
-  }
-}
 </script>
 
 <style scoped>
@@ -565,20 +562,39 @@ const handleBindPaymentMethod = async () => {
 }
 
 .profile-sidebar {
-  border-radius: var(--radius-lg);
+  border-radius: 20px;
   border: none;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.05);
   margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.profile-sidebar:hover {
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .profile-sidebar :deep(.el-card__body) {
   padding: 0;
 }
 
+.sidebar-header-bg {
+  height: 120px;
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 0;
+}
+
 .user-info-overview {
-  padding: 32px 24px 24px;
+  position: relative;
+  z-index: 1;
+  padding: 60px 24px 24px;
   text-align: center;
   border-bottom: 1px solid var(--el-border-color-lighter);
+  background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 40px);
 }
 
 .avatar-uploader {
@@ -591,9 +607,10 @@ const handleBindPaymentMethod = async () => {
 }
 
 .avatar-img {
-  border: 4px solid var(--el-bg-color);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  background: var(--el-fill-color-light);
+  border: 4px solid white;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  background: white;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .avatar-hover-mask {
@@ -610,6 +627,10 @@ const handleBindPaymentMethod = async () => {
   font-size: 14px;
 }
 
+.avatar-uploader:hover .avatar-img {
+  transform: scale(1.05);
+}
+
 .avatar-uploader:hover .avatar-hover-mask {
   opacity: 1;
 }
@@ -617,7 +638,7 @@ const handleBindPaymentMethod = async () => {
 .user-nickname {
   margin: 0 0 8px;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
 }
 
@@ -639,21 +660,29 @@ const handleBindPaymentMethod = async () => {
 }
 
 .profile-menu {
-  padding: 12px 0;
+  padding: 16px 0;
 }
 
 .profile-menu .el-menu-item {
   height: 50px;
   line-height: 50px;
-  margin: 4px 16px;
-  border-radius: var(--radius-md);
+  margin: 8px 16px;
+  border-radius: 12px;
   color: var(--text-primary);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile-menu .el-menu-item:hover {
+  background-color: var(--el-fill-color-light);
+  transform: translateX(4px);
 }
 
 .profile-menu .el-menu-item.is-active {
-  background-color: var(--el-color-primary-light-9);
+  background: linear-gradient(90deg, var(--el-color-primary-light-9) 0%, transparent 100%);
   color: var(--el-color-primary);
   font-weight: 600;
+  box-shadow: inset 4px 0 0 0 var(--el-color-primary);
+  border-radius: 4px 12px 12px 4px;
 }
 
 .profile-menu .el-icon {
@@ -662,27 +691,44 @@ const handleBindPaymentMethod = async () => {
 }
 
 .profile-content-card {
-  border-radius: var(--radius-lg);
+  border-radius: 20px;
   border: none;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.05);
   min-height: 600px;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.profile-content-card:hover {
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .profile-content-card :deep(.el-card__body) {
-  padding: 32px;
+  padding: 40px;
 }
 
 .card-header-title {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
   color: var(--text-primary);
-  margin-bottom: 32px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  margin-bottom: 40px;
+  position: relative;
+  padding-bottom: 8px;
+}
+
+.card-header-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 48px;
+  height: 4px;
+  background: var(--el-color-primary);
+  border-radius: 2px;
 }
 
 .tab-content {
-  max-width: 800px;
+  width: 100%;
 }
 
 .fade-in {
@@ -728,7 +774,7 @@ const handleBindPaymentMethod = async () => {
 }
 
 .upload-placeholder {
-  height: 180px;
+  height: 240px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -744,73 +790,161 @@ const handleBindPaymentMethod = async () => {
 
 .idcard {
   width: 100%;
-  height: 180px;
+  height: 240px;
   object-fit: cover;
   display: block;
 }
 
-.action-bar {
-  margin-bottom: 24px;
-}
-
-.payment-list {
-  margin-top: 16px;
-}
-
-.payment-card {
-  padding: 20px;
-  border-radius: var(--radius-lg);
+.modern-stat-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #3db5ff 0%, #1677ff 100%);
+  border-radius: 20px;
+  padding: 40px;
   color: white;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  transition: transform 0.3s;
-}
-
-.payment-card:hover {
-  transform: translateY(-4px);
-}
-
-.payment-wechat {
-  background: linear-gradient(135deg, #07c160, #06ad56);
-}
-
-.payment-alipay {
-  background: linear-gradient(135deg, #1677ff, #1662fa);
-}
-
-.payment-bank {
-  background: linear-gradient(135deg, #f5222d, #cf1322);
-}
-
-.payment-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  box-shadow: 0 20px 40px -10px rgba(22, 119, 255, 0.4);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s ease;
 }
 
-.payment-type {
+.modern-stat-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 24px 48px -12px rgba(22, 119, 255, 0.6);
+}
+
+.stat-card-bg-decoration {
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.stat-card-bg-decoration::after {
+  content: '';
+  position: absolute;
+  bottom: 20px;
+  left: -50px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+  border-radius: 50%;
+}
+
+.balance-label {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 16px;
-  font-weight: 600;
-}
-
-.payment-name {
-  font-size: 14px;
+  font-weight: 500;
   opacity: 0.9;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.payment-account {
+.balance-label .el-icon {
   font-size: 20px;
-  font-family: monospace;
-  letter-spacing: 2px;
 }
 
-.payment-bank {
-  margin-top: 8px;
-  font-size: 14px;
+.balance-amount {
+  color: white;
+  margin-bottom: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.currency {
+  font-size: 28px;
+  font-weight: 600;
   opacity: 0.9;
+}
+
+.amount {
+  font-size: 64px;
+  font-weight: 800;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+
+.premium-btn {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  color: white !important;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border-radius: 12px !important;
+  padding: 0 20px !important;
+  height: 46px !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  min-width: 130px;
+}
+
+.premium-btn:hover {
+  background: white !important;
+  color: #1677ff !important;
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.premium-btn .el-icon {
+  margin-right: 8px;
+  font-size: 20px;
+}
+
+.modern-form :deep(.el-input__wrapper), 
+.modern-form :deep(.el-select__wrapper),
+.modern-form :deep(.el-textarea__inner) {
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px var(--el-border-color-lighter) inset;
+  transition: all 0.3s;
+  background-color: var(--el-fill-color-blank);
+}
+
+.modern-form :deep(.el-input__wrapper:hover), 
+.modern-form :deep(.el-select__wrapper:hover),
+.modern-form :deep(.el-textarea__inner:hover) {
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
+}
+
+.modern-form :deep(.el-input__wrapper.is-focus), 
+.modern-form :deep(.el-select__wrapper.is-focus),
+.modern-form :deep(.el-textarea__inner:focus) {
+  box-shadow: 0 0 0 2px var(--el-color-primary-light-3) inset;
+  background-color: var(--el-color-primary-light-9);
+}
+
+.recharge-dialog-content {
+  padding: 20px 0;
+}
+
+.recharge-amount-input, .payment-method {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.label {
+  width: 80px;
+  color: #606266;
+}
+
+.alipay-option {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  border: 1px solid #409eff;
+  color: #409eff;
+  border-radius: 4px;
+  background-color: #ecf5ff;
 }
 
 @media (max-width: 1024px) {
@@ -819,6 +953,20 @@ const handleBindPaymentMethod = async () => {
   }
   .sidebar {
     width: 100%;
+  }
+  .modern-stat-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .stat-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+  }
+  .premium-btn {
+    width: 100%;
+    max-width: 220px;
   }
 }
 

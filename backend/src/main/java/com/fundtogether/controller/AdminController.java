@@ -261,6 +261,12 @@ public class AdminController {
         return Result.success(stats);
     }
 
+    @GetMapping("/stats/trend")
+    public Result<List<Map<String, Object>>> getFundingTrend() {
+        List<Map<String, Object>> trend = supportOrderMapper.getFundingTrend();
+        return Result.success(trend);
+    }
+
     @GetMapping("/stats/export")
     public void exportStats(HttpServletResponse response) throws IOException {
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");

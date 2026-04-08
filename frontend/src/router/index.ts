@@ -79,11 +79,6 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('../views/SponsorProjects.vue')
       },
       {
-        path: 'user/account',
-        name: 'UserAccount',
-        component: () => import('../views/UserAccount.vue')
-      },
-      {
         path: 'user/orders',
         name: 'UserOrders',
         component: () => import('../views/UserOrders.vue')

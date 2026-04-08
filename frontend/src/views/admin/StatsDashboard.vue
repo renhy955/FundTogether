@@ -85,6 +85,9 @@ const stats = ref({
   successfulProjects: 0
 })
 
+const categoryStats = ref<any[]>([])
+const trendStats = ref<any[]>([])
+
 const exportData = () => {
   const csvContent = `data:text/csv;charset=utf-8,类型,数值\n总用户数,${stats.value.totalUsers}\n总项目数,${stats.value.totalProjects}\n总筹款金额,${stats.value.totalAmount}\n成功项目数,${stats.value.successfulProjects}`
   
@@ -100,9 +103,20 @@ const exportData = () => {
 
 onMounted(async () => {
   try {
-    const res: any = await request.get('/admin/stats')
-    if (res.data) {
-      stats.value = res.data
+    const [statsRes, categoryRes, trendRes] = await Promise.all([
+      request.get('/admin/stats'),
+      request.get('/admin/stats/category'),
+      request.get('/admin/stats/trend')
+    ])
+    
+    if ((statsRes as any).data) {
+      stats.value = (statsRes as any).data
+    }
+    if ((categoryRes as any).data) {
+      categoryStats.value = (categoryRes as any).data
+    }
+    if ((trendRes as any).data) {
+      trendStats.value = (trendRes as any).data
     }
   } catch (error) {
     ElMessage.error('获取数据大盘失败')
@@ -116,10 +130,17 @@ const initCharts = () => {
 
   if (pieChartRef.value) {
     const pieChart = echarts.init(pieChartRef.value)
+    
+    const pieData = categoryStats.value.map(item => ({
+      name: item.categoryName,
+      value: item.projectCount
+    }))
+
     pieChart.setOption({
       title: { text: '项目分类占比', left: 'center', textStyle: { color: '#0F172A', fontWeight: 700 } },
       tooltip: { trigger: 'item' },
       legend: { bottom: '0%', textStyle: { fontSize: 12, color: '#475569' } },
+      color: ['#4F46E5', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4', '#F43F5E', '#14B8A6'],
       series: [
         {
           name: '分类',
@@ -132,13 +153,7 @@ const initCharts = () => {
             borderWidth: 2
           },
           label: { show: false },
-          data: [
-            { value: 15, name: '科技', itemStyle: { color: '#4F46E5' } },
-            { value: 10, name: '公益', itemStyle: { color: '#10B981' } },
-            { value: 8, name: '农业', itemStyle: { color: '#F59E0B' } },
-            { value: 7, name: '文化', itemStyle: { color: '#EC4899' } },
-            { value: 5, name: '教育', itemStyle: { color: '#8B5CF6' } }
-          ]
+          data: pieData
         }
       ]
     })
@@ -147,13 +162,38 @@ const initCharts = () => {
 
   if (barChartRef.value) {
     const barChart = echarts.init(barChartRef.value)
+    
+    // Generate last 6 months labels if no data exists
+    const xData = []
+    const yData = []
+    
+    // Sort trend stats just in case
+    const sortedTrend = [...trendStats.value].sort((a, b) => a.month.localeCompare(b.month))
+    
+    // Create a map for quick lookup
+    const trendMap = new Map()
+    sortedTrend.forEach(item => {
+      trendMap.set(item.month, item.totalAmount)
+    })
+
+    // Get last 6 months
+    const d = new Date()
+    for (let i = 5; i >= 0; i--) {
+      const monthDate = new Date(d.getFullYear(), d.getMonth() - i, 1)
+      const monthStr = monthDate.getFullYear() + '-' + String(monthDate.getMonth() + 1).padStart(2, '0')
+      const displayStr = (monthDate.getMonth() + 1) + '月'
+      
+      xData.push(displayStr)
+      yData.push(trendMap.get(monthStr) || 0)
+    }
+
     barChart.setOption({
       title: { text: '近6个月筹款趋势', textStyle: { color: '#0F172A', fontWeight: 700 } },
       tooltip: { trigger: 'axis' },
       grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
       xAxis: {
         type: 'category',
-        data: ['1月', '2月', '3月', '4月', '5月', '6月'],
+        data: xData,
         axisLine: { lineStyle: { color: '#E2E8F0' } },
         axisLabel: { color: '#475569' }
       },
@@ -164,7 +204,7 @@ const initCharts = () => {
       },
       series: [
         {
-          data: [12000, 20000, 15000, 80000, 70000, 110000],
+          data: yData,
           type: 'bar',
           name: '金额 (元)',
           barWidth: '40%',
